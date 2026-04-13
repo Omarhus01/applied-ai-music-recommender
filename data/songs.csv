@@ -1,11 +1,30 @@
-id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
-1,Sunrise City,Neon Echo,pop,happy,0.82,118,0.84,0.79,0.18
-2,Midnight Coding,LoRoom,lofi,chill,0.42,78,0.56,0.62,0.71
-3,Storm Runner,Voltline,rock,intense,0.91,152,0.48,0.66,0.10
-4,Library Rain,Paper Lanterns,lofi,chill,0.35,72,0.60,0.58,0.86
-5,Gym Hero,Max Pulse,pop,intense,0.93,132,0.77,0.88,0.05
-6,Spacewalk Thoughts,Orbit Bloom,ambient,chill,0.28,60,0.65,0.41,0.92
-7,Coffee Shop Stories,Slow Stereo,jazz,relaxed,0.37,90,0.71,0.54,0.89
-8,Night Drive Loop,Neon Echo,synthwave,moody,0.75,110,0.49,0.73,0.22
-9,Focus Flow,LoRoom,lofi,focused,0.40,80,0.59,0.60,0.78
-10,Rooftop Lights,Indigo Parade,indie pop,happy,0.76,124,0.81,0.82,0.35
+id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness,instrumentalness
+1,Sunrise City,Neon Echo,pop,happy,0.82,118,0.84,0.79,0.18,0.05
+2,Midnight Coding,LoRoom,lofi,chill,0.42,78,0.56,0.62,0.71,0.15
+3,Storm Runner,Voltline,rock,intense,0.91,152,0.48,0.66,0.10,0.04
+4,Library Rain,Paper Lanterns,lofi,chill,0.35,72,0.60,0.58,0.86,0.60
+5,Gym Hero,Max Pulse,pop,intense,0.93,132,0.77,0.88,0.05,0.03
+6,Spacewalk Thoughts,Orbit Bloom,ambient,chill,0.28,60,0.65,0.41,0.92,0.85
+7,Coffee Shop Stories,Slow Stereo,jazz,relaxed,0.37,90,0.71,0.54,0.89,0.70
+8,Night Drive Loop,Neon Echo,synthwave,moody,0.75,110,0.49,0.73,0.22,0.55
+9,Focus Flow,LoRoom,lofi,focused,0.40,80,0.59,0.60,0.78,0.65
+10,Rooftop Lights,Indigo Parade,indie pop,happy,0.76,124,0.81,0.82,0.35,0.08
+11,Believer,Imagine Dragons,alternative rock,epic,0.87,125,0.52,0.73,0.07,0.04
+12,Demons,Imagine Dragons,alternative rock,emotional,0.58,88,0.40,0.55,0.15,0.05
+13,Hello,Adele,soul pop,melancholic,0.45,79,0.25,0.48,0.65,0.02
+14,Rolling in the Deep,Adele,soul pop,intense,0.82,105,0.50,0.73,0.38,0.03
+15,Way Down We Go,Kaleo,indie rock,dark,0.72,92,0.30,0.62,0.45,0.06
+16,Conqueror,2WEI,cinematic,epic,0.95,140,0.60,0.65,0.03,0.72
+17,Moonlight Sonata,Beethoven,classical,melancholic,0.30,54,0.28,0.22,0.98,0.97
+18,The Four Seasons Spring,Vivaldi,classical,happy,0.55,138,0.80,0.35,0.97,0.98
+19,Street Cipher,Urban Flux,hip-hop,focused,0.76,95,0.55,0.88,0.08,0.04
+20,Pulse Drop,Bass Theory,electronic,intense,0.94,145,0.62,0.91,0.02,0.78
+21,Golden Fields,Prairie Road,country,relaxed,0.48,96,0.75,0.61,0.72,0.07
+22,Velvet Hours,Silk Route,r&b,moody,0.55,88,0.45,0.72,0.30,0.06
+23,Runaway,Aurora,art pop,emotional,0.58,120,0.35,0.54,0.42,0.08
+24,Lighting Matches,Tom Grennan,indie soul,intense,0.85,128,0.62,0.74,0.12,0.04
+25,Sweet Hallelujah,Tom Grennan,indie soul,happy,0.78,122,0.78,0.72,0.18,0.05
+26,Fix You,Coldplay,alternative rock,melancholic,0.40,138,0.30,0.46,0.55,0.04
+27,A Sky Full of Stars,Coldplay,alternative rock,epic,0.87,124,0.70,0.76,0.08,0.06
+28,Dernière Danse,Indila,french pop,dark,0.62,126,0.28,0.64,0.25,0.05
+29,Mini World,Indila,french pop,melancholic,0.55,128,0.35,0.60,0.30,0.06

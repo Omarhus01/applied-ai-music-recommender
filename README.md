@@ -17,17 +17,57 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world platforms like Spotify combine two approaches: **collaborative filtering** (recommending based on what similar users listened to) and **content-based filtering** (recommending based on the song's own attributes like energy or mood). They also layer in context signals like time of day and device type. This simulation focuses purely on **content-based filtering** — no other users, no context, just matching a user's taste profile against each song's features using a weighted scoring formula.
 
-Some prompts to answer:
+For every song in the catalog, the system computes a score by asking: how well does this song match what the user wants? Songs that match on genre, mood, and energy level score higher. The full catalog is then ranked by score and the top K songs are returned as recommendations.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+**Song features used:**
 
-You can include a simple diagram or bullet list if helpful.
+- `genre` — categorical (pop, lofi, rock, ambient, jazz, synthwave, indie pop)
+- `mood` — categorical (happy, chill, intense, relaxed, focused, moody)
+- `energy` — numerical 0.0–1.0 (intensity/loudness feel)
+- `valence` — numerical 0.0–1.0 (how sad vs happy the song sounds)
+- `acousticness` — numerical 0.0–1.0 (organic vs electronic feel)
+- `tempo_bpm` — numerical (speed of the track in beats per minute)
+- `danceability` — numerical 0.0–1.0 (how strong the groove/beat is)
+
+**UserProfile stores:**
+
+- `favorite_genre` — the genre the user most identifies with
+- `favorite_mood` — the mood they are looking for right now
+- `target_energy` — the energy level they want (0.0–1.0)
+- `target_valence` — emotional tone target (0.0 sad → 1.0 happy)
+- `likes_acoustic` — boolean, whether they prefer organic/acoustic sound
+- `target_instrumentalness` — preference for instrumental vs vocal songs (0.0–1.0)
+
+---
+
+## Algorithm Recipe
+
+For each song in the catalog the system computes a score as follows:
+
+```
++ 2.0   if genre matches favorite_genre
++ 1.0   if mood matches favorite_mood
++ 1.0 × (1 - |song.energy - target_energy|)
++ 0.5 × (1 - |song.valence - target_valence|)
++ 0.5 × song.acousticness        (if likes_acoustic is True)
+  or
+  0.5 × (1 - song.acousticness)  (if likes_acoustic is False)
++ 0.5 × (1 - |song.instrumentalness - target_instrumentalness|)
+─────────────────────────────────────────────
+  Max possible score: 5.5
+```
+
+All songs are then sorted by score descending and the top K are returned.
+
+---
+
+## Expected Biases
+
+- **Genre dominance** — genre is worth +2.0 points, more than any other feature. A wrong-genre song can never outscore a right-genre song even if it matches perfectly on every other dimension.
+- **Filter bubble** — because this is a pure content-based system with no collaborative filtering, it only recommends songs similar to what the user already declared they like. There is no serendipity or cross-genre discovery.
+- **Catalog imbalance** — some genres have more songs than others (alternative rock has 4, lofi has 3, country has 1). Users with niche preferences get far less variety in their results.
 
 ---
 
@@ -41,6 +81,7 @@ You can include a simple diagram or bullet list if helpful.
    python -m venv .venv
    source .venv/bin/activate      # Mac or Linux
    .venv\Scripts\activate         # Windows
+   ```
 
 2. Install dependencies
 
@@ -106,9 +147,7 @@ Write 1 to 2 paragraphs here about what you learned:
 
 ## 7. `model_card_template.md`
 
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
+Combines reflection and model card framing from the Module 3 guidance.
 # 🎧 Model Card - Music Recommender Simulation
 
 ## 1. Model Name

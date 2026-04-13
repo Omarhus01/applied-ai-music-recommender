@@ -17,6 +17,7 @@ class Song:
     valence: float
     danceability: float
     acousticness: float
+    instrumentalness: float
 
 @dataclass
 class UserProfile:
@@ -28,6 +29,8 @@ class UserProfile:
     favorite_mood: str
     target_energy: float
     likes_acoustic: bool
+    target_valence: float = 0.5
+    target_instrumentalness: float = 0.1
 
 class Recommender:
     """

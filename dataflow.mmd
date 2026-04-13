@@ -1,0 +1,19 @@
+flowchart TD
+    A([songs.csv]) -->|load| B[load_songs]
+    B --> C[(song list)]
+    D([user_prefs]) --> E[recommend_songs]
+    C --> E
+
+    E --> F[score_song - song 1]
+    E --> G[score_song - song 2]
+    E --> H[score_song - ...]
+    E --> I[score_song - song N]
+
+    F --> J[(all scored songs)]
+    G --> J
+    H --> J
+    I --> J
+
+    J --> K[sort by score descending]
+    K --> L[take top K]
+    L --> M([print to terminal])
