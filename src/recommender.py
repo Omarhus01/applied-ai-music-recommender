@@ -40,13 +40,65 @@ class Recommender:
     def __init__(self, songs: List[Song]):
         self.songs = songs
 
-    def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+    def _song_to_dict(self, song: Song) -> Dict:
+        return {
+            "id":               song.id,
+            "title":            song.title,
+            "artist":           song.artist,
+            "genre":            song.genre,
+            "mood":             song.mood,
+            "energy":           song.energy,
+            "tempo_bpm":        song.tempo_bpm,
+            "valence":          song.valence,
+            "danceability":     song.danceability,
+            "acousticness":     song.acousticness,
+            "instrumentalness": song.instrumentalness,
+        }
+
+    def _user_to_dict(self, user: UserProfile) -> Dict:
+        return {
+            "favorite_genre":          user.favorite_genre,
+            "favorite_mood":           user.favorite_mood,
+            "target_energy":           user.target_energy,
+            "target_valence":          user.target_valence,
+            "likes_acoustic":          user.likes_acoustic,
+            "target_instrumentalness": user.target_instrumentalness,
+        }
+
+    def recommend(self, user: UserProfile, k: int = 5, mode: str = "default") -> List[Song]:
         """Returns the top k songs sorted by score for the given user profile."""
-        return self.songs[:k]
+        user_dict = self._user_to_dict(user)
+        song_dicts = [self._song_to_dict(s) for s in self.songs]
+        results = recommend_songs(user_dict, song_dicts, k=k, mode=mode)
+        return [Song(**song) for song, _, _ in results]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        """Returns a plain-language explanation of why a song was recommended."""
-        return "Explanation placeholder"
+        """Returns a one-sentence plain-language explanation of why a song was recommended."""
+        parts = []
+
+        if song.genre == user.favorite_genre:
+            parts.append(f"it matches your {user.favorite_genre} genre preference")
+
+        if song.mood == user.favorite_mood:
+            parts.append(f"has your target {user.favorite_mood} mood")
+
+        energy_diff = abs(song.energy - user.target_energy)
+        if energy_diff <= 0.1:
+            parts.append(f"closely matches your energy target ({song.energy:.2f} vs {user.target_energy:.2f})")
+
+        valence_diff = abs(song.valence - user.target_valence)
+        if valence_diff <= 0.15:
+            parts.append(f"aligns with your valence preference ({song.valence:.2f})")
+
+        if user.likes_acoustic and song.acousticness >= 0.5:
+            parts.append("has the acoustic quality you like")
+        elif not user.likes_acoustic and song.acousticness < 0.3:
+            parts.append("fits your preference for non-acoustic sound")
+
+        if not parts:
+            parts.append(f"was the closest match available for your preferences")
+
+        return f"{song.title} by {song.artist} was recommended because " + ", and ".join(parts) + "."
 
 def load_songs(csv_path: str) -> List[Dict]:
     """Loads songs from a CSV file and returns them as a list of dicts with correct types."""
