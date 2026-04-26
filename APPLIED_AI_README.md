@@ -6,6 +6,26 @@ This upgrade turns it into something that actually feels like a system you'd wan
 
 ---
 
+## System Architecture
+
+### Before — Module 3 (Simple Recommender)
+
+![System Before](assets/system-before.png)
+
+### After — Applied AI Upgrade
+
+![System After](assets/system-after.png)
+
+### Where AI Results Are Checked
+
+The system has three explicit checkpoints where AI output is verified — not just generated:
+
+1. **Gemini Quality Check** — after the recommender returns results, Gemini re-reads the user's original request and the top 3 songs and judges whether they actually match. If not, it triggers a retry with relaxed constraints.
+2. **Score Guardrail** — after all retries, if the top result still scores below 3.0 / 6.5, the system warns the user explicitly instead of presenting weak results as if they were good.
+3. **Test Suite (21 tests)** — the reliability and integration tests verify that the system behaves correctly across edge cases, guardrail inputs, and full end-to-end flows. This is where a human (the developer) checks AI behavior systematically, not just by running it once.
+
+---
+
 ## What It Does Now
 
 You type something like:
