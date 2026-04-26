@@ -9,7 +9,8 @@ You will implement the functions in recommender.py:
 - recommend_songs
 """
 
-from src.recommender import load_songs, recommend_songs
+from src.recommender import load_songs_v2
+from src.agent import run_agent
 from tabulate import tabulate
 
 
@@ -109,22 +110,27 @@ def print_recommendations(profile_name: str, recommendations: list) -> None:
 
 
 def main() -> None:
-    songs = load_songs("data/songs.csv")
-    print(f"Loaded songs: {len(songs)}")
+    print("Loading songs dataset...")
+    songs = load_songs_v2("data/new_songs_dataset.csv", sample=10000)
+    print(f"Loaded {len(songs)} songs.\n")
 
-    # Run all profiles with default mode
-    for profile_name, user_prefs in PROFILES:
-        recommendations = recommend_songs(user_prefs, songs, k=5, mode="default")
-        print_recommendations(profile_name, recommendations)
+    print("=" * 60)
+    print("  MUSIC RECOMMENDER — Conversational Mode")
+    print("=" * 60)
+    print("Describe what kind of music you want and I'll find it for you.")
+    print("Type 'quit' to exit.\n")
 
-    # Demonstrate scoring modes using the conflicting profile
-    print("\n" + "#" * 60)
-    print("  SCORING MODE COMPARISON — Conflicting Profile")
-    print("#" * 60)
-    _, conflicting_prefs = PROFILES[3]
-    for mode in ["genre-first", "mood-first", "energy-first"]:
-        recommendations = recommend_songs(conflicting_prefs, songs, k=5, mode=mode)
-        print_recommendations(f"Conflicting — {mode.upper()} mode", recommendations)
+    while True:
+        user_input = input("What are you in the mood for? ").strip()
+        if user_input.lower() in ("quit", "exit", "q"):
+            print("Goodbye!")
+            break
+
+        results = run_agent(user_input, songs, k=5)
+        if results:
+            print_recommendations("Your Recommendations", results)
+
+        print()
 
 
 if __name__ == "__main__":

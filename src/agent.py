@@ -1,0 +1,176 @@
+import json
+import logging
+import os
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+
+from dotenv import load_dotenv
+from google import genai
+
+from src.recommender import load_songs_v2, recommend_songs
+
+load_dotenv()
+
+# --- Logging setup ---
+os.makedirs("logs", exist_ok=True)
+log_file = f"logs/agent_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
+
+GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+DEFAULTS = {
+    "favorite_genre": "",
+    "favorite_mood": "",
+    "target_energy": 0.5,
+    "target_valence": 0.5,
+    "likes_acoustic": False,
+    "target_instrumentalness": 0.1,
+}
+
+
+def _call_gemini(prompt: str) -> str:
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    return response.text.strip()
+
+
+def _parse_profile(user_input: str) -> Dict:
+    """Ask Gemini to parse user text into a structured UserProfile dict."""
+    prompt = f"""
+You are a music preference parser. Given a user's request, extract their music preferences.
+Return ONLY a valid JSON object with these exact keys:
+- favorite_genre (string, e.g. "pop", "rock", "lofi", "jazz" — use common Spotify genre names, or empty string if unclear)
+- favorite_mood (string, one of: happy, chill, intense, melancholic, energetic, peaceful, dark — or empty string if unclear)
+- target_energy (float 0.0-1.0, how energetic they want the music)
+- target_valence (float 0.0-1.0, how positive/upbeat they want it)
+- likes_acoustic (boolean)
+- target_instrumentalness (float 0.0-1.0, how instrumental vs vocal)
+- confidence (string: "high" if you're confident, "low" if guessing)
+
+User request: "{user_input}"
+
+Return only the JSON, no explanation.
+"""
+    logger.info(f"Parsing user input: {user_input}")
+    raw = _call_gemini(prompt)
+
+    # Strip markdown code fences if present
+    raw = raw.replace("```json", "").replace("```", "").strip()
+
+    try:
+        parsed = json.loads(raw)
+        logger.info(f"Parsed profile: {parsed}")
+        return parsed
+    except json.JSONDecodeError:
+        logger.warning(f"Failed to parse Gemini response as JSON: {raw}")
+        return {}
+
+
+def _check_quality(user_input: str, results: List[Tuple]) -> str:
+    """Ask Gemini if the results match the user's intent. Returns 'good' or 'retry'."""
+    songs_summary = "\n".join(
+        f"- {song['title']} by {song['artist']} | genre: {song['genre']} | mood: {song['mood']} | energy: {song['energy']:.2f}"
+        for song, _, _ in results[:3]
+    )
+    prompt = f"""
+A user asked for music with this request: "{user_input}"
+
+The recommender returned these top songs:
+{songs_summary}
+
+Do these results match what the user asked for? Reply with ONLY one word: "good" or "retry".
+"""
+    logger.info("Checking result quality with Gemini")
+    answer = _call_gemini(prompt).lower()
+    logger.info(f"Quality check result: {answer}")
+    return "good" if "good" in answer else "retry"
+
+
+def _relax_profile(profile: Dict, attempt: int) -> Dict:
+    """Relax constraints on each retry attempt."""
+    relaxed = profile.copy()
+    if attempt == 1:
+        # Widen energy range by adjusting target toward middle
+        current = relaxed.get("target_energy", 0.5)
+        relaxed["target_energy"] = current * 0.7 + 0.5 * 0.3
+        logger.info(f"Retry {attempt}: relaxed energy to {relaxed['target_energy']:.2f}")
+    elif attempt == 2:
+        # Drop genre requirement
+        relaxed["favorite_genre"] = ""
+        logger.info(f"Retry {attempt}: dropped genre requirement")
+    return relaxed
+
+
+def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[Tuple]]:
+    """
+    Main agentic loop:
+    1. Validate input
+    2. Parse into UserProfile
+    3. Ask follow-up if critical fields missing
+    4. Run recommender
+    5. Check quality, retry up to 3 times
+    """
+    # --- Input guardrail ---
+    if not user_input or len(user_input.strip().split()) < 3:
+        print("\nPlease describe what you're looking for in a bit more detail (at least 3 words).")
+        logger.warning(f"Input too short: '{user_input}'")
+        return None
+
+    logger.info(f"Agent started with input: '{user_input}'")
+
+    # --- Parse profile ---
+    profile = _parse_profile(user_input)
+    if not profile:
+        print("\nSorry, I couldn't understand your request. Try describing the mood or genre you want.")
+        return None
+
+    # --- Follow-up if critical fields missing ---
+    if not profile.get("favorite_genre") and not profile.get("favorite_mood"):
+        followup = input("\nCould you tell me the genre or mood you're looking for? (e.g. 'rock' or 'chill'): ").strip()
+        logger.info(f"Follow-up answer: '{followup}'")
+        extra = _parse_profile(followup)
+        if extra.get("favorite_genre"):
+            profile["favorite_genre"] = extra["favorite_genre"]
+        if extra.get("favorite_mood"):
+            profile["favorite_mood"] = extra["favorite_mood"]
+
+    # Fill in defaults for missing fields
+    for key, default in DEFAULTS.items():
+        if key not in profile or profile[key] == "" and key not in ("favorite_genre", "favorite_mood"):
+            profile.setdefault(key, default)
+
+    # --- Agentic retry loop ---
+    best_results = None
+    for attempt in range(3):
+        logger.info(f"Attempt {attempt + 1} with profile: {profile}")
+        results = recommend_songs(profile, songs, k=k, mode="default")
+
+        if not results:
+            logger.warning("No results returned")
+            profile = _relax_profile(profile, attempt)
+            continue
+
+        if best_results is None:
+            best_results = results
+
+        quality = _check_quality(user_input, results)
+        if quality == "good":
+            logger.info(f"Good results found on attempt {attempt + 1}")
+            return results
+
+        logger.info(f"Results not satisfactory on attempt {attempt + 1}, retrying...")
+        best_results = results
+        profile = _relax_profile(profile, attempt)
+
+    logger.info("Max retries reached, returning best results found")
+    print("\nI couldn't find a perfect match, but here's the closest I found:")
+    return best_results
