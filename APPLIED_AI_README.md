@@ -2,6 +2,16 @@
 
 > A natural language music recommendation system built on a 114,000-track Spotify dataset, powered by Gemini, and designed to explain its own reasoning — not just return a list.
 
+**GitHub:** https://github.com/Omarhus01/applied-ai-music-recommender
+
+**Video Walkthrough:** [Loom link coming soon]
+
+---
+
+## Portfolio Reflection
+
+I'm a CS student who came into this project knowing how to build things, but not how to build AI systems specifically. What I learned here is that the technical part, calling an API and getting a response, is the easy part. The real work is everything around it: how you validate input before it reaches the model, how you handle failures gracefully, how you test behavior and not just code, and how you document what the system cannot do just as clearly as what it can. This project also showed me that AI touches fields I wasn't expecting, from psychology (the circumplex model of affect) to ethics (bias in datasets, misuse potential, user privacy). That is the part that surprised me most and made me want to keep going. I came in thinking AI was a technical skill. I'm leaving thinking it's closer to a design discipline.
+
 ## What This Project Is
 
 This is an upgraded version of the **Music Recommender Simulation** built in Module 3. The original system — VibeMatch 1.0 — took a structured user profile (favorite genre, target energy as a number, mood label, etc.) and scored a hand-crafted catalog of 29 songs against it using a weighted formula. It was a working content-based recommender, but it felt like filling in a form. There was no AI involved — just math.
