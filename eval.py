@@ -237,6 +237,73 @@ def case_12(agent_songs):
 
 
 # ---------------------------------------------------------------------------
+# Group D — RAG Enhancement Comparison (API required)
+# ---------------------------------------------------------------------------
+
+def case_13(agent_songs):
+    """
+    Side-by-side comparison showing RAG improvement from adding genre + mood context.
+    Runs the same song through explanation with and without the context databases,
+    then prints both so the difference is visible.
+    """
+    import json as _json
+
+    profile = {
+        "favorite_genre": "pop", "favorite_mood": "energetic",
+        "target_energy": 0.9, "target_valence": 0.9,
+        "likes_acoustic": False, "target_instrumentalness": 0.0,
+    }
+    results = recommend_songs(profile, agent_songs, k=1)
+    if not results:
+        return False, "No results to compare"
+
+    song, score, _ = results[0]
+
+    # --- Without context (audio features only) ---
+    prompt_before = f"""
+A user asked for: "I want upbeat energetic pop music to work out to"
+
+Song: {song['title']} by {song['artist']}
+  Genre: {song['genre']} | Mood: {song['mood']}
+  Energy: {song['energy']:.2f} | Valence: {song['valence']:.2f}
+  Acousticness: {song['acousticness']:.2f} | Instrumentalness: {song['instrumentalness']:.2f}
+  Score: {score:.2f}
+
+Write a single sentence explaining why this song was recommended.
+"""
+
+    # --- With context (audio features + genre + mood) ---
+    from src.agent import _GENRE_CONTEXT, _MOOD_CONTEXT, _call_gemini
+    genre_desc = _GENRE_CONTEXT.get(song["genre"], "")
+    mood_desc = _MOOD_CONTEXT.get(song["mood"], "")
+
+    prompt_after = f"""
+A user asked for: "I want upbeat energetic pop music to work out to"
+
+Song: {song['title']} by {song['artist']}
+  Genre: {song['genre']} | Mood: {song['mood']}
+  Energy: {song['energy']:.2f} | Valence: {song['valence']:.2f}
+  Acousticness: {song['acousticness']:.2f} | Instrumentalness: {song['instrumentalness']:.2f}
+  Score: {score:.2f}
+  Genre context: {genre_desc}
+  Mood context: {mood_desc}
+
+Write a single sentence explaining why this song was recommended. Use the genre and mood context to make the explanation more specific and grounded.
+"""
+
+    explanation_before = _call_gemini(prompt_before)
+    explanation_after = _call_gemini(prompt_after)
+
+    print(f"\n  [RAG Comparison — {song['title']} by {song['artist']}]")
+    print(f"\n  WITHOUT genre/mood context:")
+    print(f"    {explanation_before}")
+    print(f"\n  WITH genre/mood context (enhanced RAG):")
+    print(f"    {explanation_after}")
+
+    return True, "Side-by-side comparison printed above"
+
+
+# ---------------------------------------------------------------------------
 # Report printer
 # ---------------------------------------------------------------------------
 
@@ -251,6 +318,7 @@ def print_report():
         "A": "GUARDRAIL CASES — no API",
         "B": "EDGE CASES — no API",
         "C": "FULL AGENT CASES — Gemini API",
+        "D": "RAG ENHANCEMENT — before/after comparison",
     }
 
     scores = []
@@ -322,7 +390,7 @@ def main():
 
     # --- Group C: Full agent cases ---
     if args.no_api:
-        print("\n[Skipping Group C — --no-api flag set]")
+        print("\n[Skipping Groups C and D — --no-api flag set]")
     else:
         print("\nRunning Group C (API calls — this takes ~30 seconds)...")
         random.seed(SEED)
@@ -330,6 +398,9 @@ def main():
         run_case(10, "C", "Clear request (workout pop)",    case_10, agent_songs)
         run_case(11, "C", "Hard to satisfy (study/instr.)", case_11, agent_songs)
         run_case(12, "C", "Conflicting (energy + sad)",     case_12, agent_songs)
+
+        print("\nRunning Group D (RAG enhancement comparison)...")
+        run_case(13, "D", "RAG before/after (genre+mood context)", case_13, agent_songs)
 
     print_report()
 

@@ -254,7 +254,7 @@ python -m pytest tests/ -v
 
 Evaluation harness (predefined cases, structured report):
 ```bash
-python eval.py           # All 12 cases including Gemini API
+python eval.py           # All 13 cases including Gemini API and RAG comparison
 python eval.py --no-api  # Groups A + B only, no API needed (~3 seconds)
 ```
 
@@ -291,7 +291,7 @@ Every run now prints a live decision trace showing exactly what the agent decide
 
 ### Evaluation Harness
 
-`eval.py` runs 12 predefined test cases across three groups and prints a structured pass/fail report. Cases cover guardrail inputs, edge cases, and full agent runs with real API calls.
+`eval.py` runs 13 predefined test cases across four groups and prints a structured pass/fail report. Cases cover guardrail inputs, edge cases, full agent runs with real API calls, and a RAG before/after comparison.
 
 ```
 ============================================================
@@ -312,16 +312,54 @@ Every run now prints a live decision trace showing exactly what the agent decide
   Case 09 | Consistency (3 runs)                | PASS | All 3 runs identical
 
 [FULL AGENT CASES — Gemini API]
-  Case 10 | Clear request (workout pop)         | PASS | Top: 5.19 | Retries: 3 | Confidence: high
-  Case 11 | Hard to satisfy (study/instr.)      | PASS | Top: 4.13 | Retries: 0 | Confidence: high
-  Case 12 | Conflicting (energy + sad)          | PASS | Top: 3.50 | Retries: 3 | Confidence: high
+  Case 10 | Clear request (workout pop)         | PASS | Top: 5.14 | Retries: 3 | Confidence: high
+  Case 11 | Hard to satisfy (study/instr.)      | PASS | Top: 4.27 | Retries: 1 | Confidence: high
+  Case 12 | Conflicting (energy + sad)          | PASS | Top: 3.50 | Retries: 3 | Confidence: high | Honest fallback returned
+
+[RAG ENHANCEMENT — before/after comparison]
+  Case 13 | RAG before/after (genre+mood context) | PASS | Side-by-side comparison printed above
 
 ------------------------------------------------------------
-  Results      : 12 / 12 passed
-  Avg score    : 4.19 / 6.5
-  Avg retries  : 2.0
+  Results      : 13 / 13 passed
+  Avg score    : 4.20 / 6.5
+  Avg retries  : 2.3
 ============================================================
 ```
+
+### RAG Enhancement — Genre and Mood Context
+
+The original RAG layer retrieved only the song's own audio features (energy, valence, mood, genre, acousticness, instrumentalness) and passed them to Gemini to write an explanation. The enhanced version adds two additional retrieval sources:
+
+1. **`data/genre_context.json`** — plain-English descriptions of ~40 genres explaining what each genre sounds like, who listens to it, and what musical characteristics define it
+2. **`data/mood_context.json`** — descriptions of all 7 mood labels grounded in the circumplex model of affect (Russell, 1980), explaining what each mood means in musical and psychological terms
+
+Gemini now receives audio features + genre knowledge + mood knowledge for every song it explains. This produces explanations that reference what a genre actually sounds like rather than just repeating the label.
+
+**Before (audio features only):**
+> "This song was recommended because it's an energetic pop track with a high energy level and moderate valence, making it a good fit for an upbeat workout."
+
+**After (audio features + genre context + mood context):**
+> "This pop track is recommended for your workout because its energetic mood, driven by strong rhythmic patterns and a sense of forward momentum, combines the genre's danceable qualities with the stimulating feel needed to drive movement and sustained effort."
+
+#### Why Static JSON Files and Not Something More Sophisticated
+
+Three approaches were considered for storing the context knowledge:
+
+**Option 1 — Static JSON files (chosen):** Genre and mood descriptions are written once and stored as files. This approach has no runtime cost, no API dependency, and full control over the content. The descriptions don't hallucinate and don't change between runs. The trade-off is that only genres and moods explicitly included in the files get context — any genre not in the JSON gets no extra description.
+
+**Option 2 — Generate descriptions dynamically with Gemini:** Ask Gemini at startup to generate a description for every genre found in the dataset. No manual writing required and new genres are covered automatically. The trade-off is added API cost at startup and less control over what Gemini writes — descriptions could vary between runs or include inaccuracies.
+
+**Option 3 — Vector database retrieval:** Embed genre and mood descriptions as vectors and retrieve the most semantically similar context using cosine similarity search — the way production RAG systems work at scale (using tools like Chroma or Pinecone). This is the most technically correct form of RAG retrieval. The trade-off is significant infrastructure overhead: an embedding model, a vector index, and a similarity search layer are all required. This is beyond the scope of a course project but would be the right architecture for a production system.
+
+Static JSON was chosen because it delivers the core benefit of grounded, external context without adding infrastructure that would obscure the learning objective.
+
+#### Future Improvements to RAG
+
+Two natural extensions would meaningfully improve the RAG layer beyond what's built here:
+
+- **Dynamic context generation:** Replace the static JSON files with Gemini-generated descriptions at startup. Any genre or mood in the dataset gets described automatically without manual maintenance. This eliminates the coverage gap for rare or unlisted genres.
+
+- **Multi-turn session context:** Within a single conversation session, the system currently treats every request as independent. A stronger RAG layer would retrieve what the user has already heard and use that as additional context — so Gemini could explain not just why a song matches the current request, but why it offers something different from what the user already got. This would require maintaining session state between requests, which adds architectural complexity but would produce significantly more personalized explanations.
 
 ---
 
@@ -333,7 +371,9 @@ Every run now prints a live decision trace showing exactly what the agent decide
 │   └── system-after.png        # Architecture diagram — upgraded version
 ├── data/
 │   ├── songs.csv               # Original 50-song dataset (Module 3)
-│   └── new_songs_dataset.csv   # Spotify 114k dataset (this version)
+│   ├── new_songs_dataset.csv   # Spotify 114k dataset (this version)
+│   ├── genre_context.json      # Genre knowledge base for RAG enhancement (~40 genres)
+│   └── mood_context.json       # Mood knowledge base grounded in circumplex model (7 moods)
 ├── logs/                       # Auto-generated logs from each run
 ├── src/
 │   ├── agent.py                # Agentic workflow, RAG, and guardrails

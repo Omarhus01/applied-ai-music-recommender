@@ -141,23 +141,46 @@ def _relax_profile(profile: Dict, attempt: int) -> Dict:
     return relaxed
 
 
+def _load_context_db(path: str) -> Dict:
+    """Load a JSON context knowledge base, return empty dict if missing."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+# Load genre and mood context databases once at module level
+_GENRE_CONTEXT = _load_context_db("data/genre_context.json")
+_MOOD_CONTEXT = _load_context_db("data/mood_context.json")
+
+
 def generate_rag_explanations(user_input: str, results: List[Tuple]) -> List[Tuple]:
     """
-    RAG explanation layer:
-    - Retrieves each song's actual feature data (the grounding context)
-    - Passes user request + all songs' features to Gemini in one call
-    - Returns results with Gemini-generated natural language explanations
-    - Falls back to score-based explanation if Gemini fails
+    RAG explanation layer — three retrieval sources per song:
+    1. Song audio features (energy, valence, mood, genre, acousticness, instrumentalness)
+    2. Genre context — retrieved from genre_context.json knowledge base
+    3. Mood context — retrieved from mood_context.json, grounded in the circumplex model
+    Passes all retrieved context to Gemini in one call.
+    Falls back to score-based explanation if Gemini fails.
     """
     songs_context = ""
     for i, (song, score, fallback_explanation) in enumerate(results, start=1):
+        genre_desc = _GENRE_CONTEXT.get(song["genre"], "")
+        mood_desc = _MOOD_CONTEXT.get(song["mood"], "")
+
         songs_context += f"""
 Song {i}: {song['title']} by {song['artist']}
   Genre: {song['genre']} | Mood: {song['mood']}
   Energy: {song['energy']:.2f} | Valence: {song['valence']:.2f}
   Acousticness: {song['acousticness']:.2f} | Instrumentalness: {song['instrumentalness']:.2f}
-  Score: {score:.2f}
-"""
+  Score: {score:.2f}"""
+
+        if genre_desc:
+            songs_context += f"\n  Genre context: {genre_desc}"
+        if mood_desc:
+            songs_context += f"\n  Mood context: {mood_desc}"
+        songs_context += "\n"
 
     prompt = f"""
 A user asked for music with this request: "{user_input}"
