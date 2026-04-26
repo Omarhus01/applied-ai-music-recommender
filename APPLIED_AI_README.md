@@ -1,8 +1,14 @@
 # Applied AI Music Recommender
 
-This project started as a simple music recommender from Module 3 — you give it your preferences, it scores every song and returns the top 5. That version worked, but it was rigid. You had to fill in exact fields like favorite genre and target energy as numbers. There was no real AI involved, just math.
+> A natural language music recommendation system built on a 114,000-track Spotify dataset, powered by Gemini, and designed to explain its own reasoning — not just return a list.
 
-This upgrade turns it into something that actually feels like a system you'd want to use. You describe what you want in plain English, and the system figures out the rest.
+## What This Project Is
+
+This is an upgraded version of the **Music Recommender Simulation** built in Module 3. The original system — VibeMatch 1.0 — took a structured user profile (favorite genre, target energy as a number, mood label, etc.) and scored a hand-crafted catalog of 29 songs against it using a weighted formula. It was a working content-based recommender, but it felt like filling in a form. There was no AI involved — just math.
+
+This version — VibeMatch 2.0 — replaces the form with natural language. You describe what you want, and the system figures the rest out using Gemini, a real 114,000-track Spotify dataset, and an agentic workflow that checks its own results and retries when they're not good enough.
+
+**Why it matters:** Most real AI systems fail not because the model is bad, but because there are no guardrails, no quality checks, and no honest fallback when results are weak. This project is built to demonstrate exactly those things — an agentic loop that verifies its own output, RAG explanations grounded in real data, and a test suite that proves the system behaves correctly under edge cases and adversarial inputs. That's what applied AI looks like in practice.
 
 ---
 
@@ -73,7 +79,7 @@ Four guardrails were added to prevent the system from behaving badly:
 - **Execution guardrail** — the retry loop is hard-capped at 3 iterations so it can never run forever
 - **Score guardrail** — if the top result scores below 3.0 out of 6.5, the system warns you that no strong match was found rather than pretending the results are good
 
-### 5. Reliability and Testing — 19 Tests
+### 5. Reliability and Testing — 21 Tests
 
 The system is tested at two levels:
 
@@ -89,6 +95,76 @@ The system is tested at two levels:
 - Agent retry: conflicting input triggers the retry loop without crashing
 - RAG fallback: if Gemini fails, explanations fall back to score-based text gracefully
 - Full end-to-end: user types a request, agent runs, results come back well-formed
+
+---
+
+## Sample Interactions
+
+### Case 1 — Clear Request (Works First Try)
+
+**Input:**
+```
+I want upbeat energetic pop music to work out to
+```
+
+**What happened:** Gemini parsed the request confidently (genre: pop, mood: energetic, energy: 0.9). Quality check passed on attempt 1.
+
+**Output:**
+```
+| #1 | Bad Habits               | Ed Sheeran             | pop       | energetic | 5.28 / 6.5 |
+| #2 | One Kiss (with Dua Lipa) | Calvin Harris;Dua Lipa | pop       | energetic | 5.25 / 6.5 |
+| #3 | Sweetness                | Jimmy Eat World        | power-pop | energetic | 4.34 / 6.5 |
+```
+
+**RAG Explanation for #1:**
+> "This song perfectly matches your request for upbeat energetic pop music due to its pop genre, energetic mood, and high energy level of 0.89, making it ideal for a workout."
+
+---
+
+### Case 2 — Vague Request (Triggers Follow-Up Question)
+
+**Input:**
+```
+just give me something good
+```
+
+**What happened:** Gemini couldn't extract genre or mood — confidence was "low". The agent asked one follow-up question. User replied "rock". System found good results on attempt 1.
+
+**Follow-up:**
+```
+Could you tell me the genre or mood you're looking for? (e.g. 'rock' or 'chill'): rock
+```
+
+**Output:**
+```
+| #1 | Free Fallin'             | Tom Petty | rock | chill     | 4.18 / 6.5 |
+| #2 | Hotel California         | Eagles    | rock | energetic | 4.18 / 6.5 |
+```
+
+---
+
+### Case 3 — Conflicting Request (Triggers All 3 Retries)
+
+**Input:**
+```
+I want extremely high energy but deeply sad and melancholic music
+```
+
+**What happened:** High energy + melancholic is a contradiction — very few songs are both. The agent retried 3 times: first widening the energy range, then dropping the genre requirement. Still couldn't find a perfect match. Returned honest message with best found.
+
+```
+I couldn't find a perfect match, but here's the closest I found:
+```
+
+**Output:**
+```
+| #1 | Vogel im Kafig | Feora    | anime | melancholic | 3.54 / 6.5 |
+| #2 | Grade          | Ishome   | idm   | melancholic | 3.52 / 6.5 |
+| #3 | The Mob (Gladiator Soundtrack) | Hans Zimmer | german | melancholic | 3.48 / 6.5 |
+```
+
+**RAG Explanation for #1:**
+> "Vogel im Kafig is recommended for its melancholic mood and very low valence of 0.12, aligning with the request for deeply sad music, although its energy of 0.39 is not extremely high."
 
 ---
 
@@ -177,6 +253,78 @@ python -m pytest tests/ -v
 - Genre representation in the Spotify dataset is uneven. Rare genres like tango or jazz fusion may return fewer than 5 results.
 - The system targets precision over recall by design — it would rather return 3 strong matches than 5 weak ones.
 - Each request makes 2-3 Gemini API calls, adding roughly 5-10 seconds of latency.
-- The system uses a 10,000-song sample during development. Switch to the full 114k dataset for production by removing the `sample` parameter in `main.py`.
+- The system loads the full 114,000-song dataset on startup, which takes a few seconds. This is intentional — production quality over development speed.
 
 See `model_card.md` for the full breakdown of biases and ethical considerations.
+
+---
+
+## Design Decisions and Trade-offs
+
+### Precision Over Recall
+
+The system is designed to return fewer, stronger results rather than filling 5 slots with weak matches. Three mechanisms enforce this:
+
+1. The diversity penalty caps results at 2 per artist and 2 per genre, preventing one dominant category from filling the whole list
+2. The score guardrail warns the user when no strong match exists (top score < 3.0 / 6.5) instead of presenting weak results as if they were good
+3. The retry loop keeps trying until Gemini confirms quality — it stops only when results are good or after 3 attempts
+
+**Trade-off:** Users with very rare taste preferences (e.g. jazz fusion, tango) may receive fewer than 5 results. The system treats an honest "I couldn't find a strong match" as better than padding with irrelevant songs.
+
+### Why 3 Retries
+
+The retry cap is a guardrail, not an arbitrary limit. Each retry costs a Gemini API call and adds 3-5 seconds of latency. Three attempts gives the system enough room to progressively relax constraints (widen energy → drop genre) without running indefinitely. A hard cap of 3 prevents infinite loops on genuinely unresolvable requests.
+
+### Why the Circumplex Model for Mood
+
+The Spotify dataset has no mood column. Two options were considered: (1) skip mood entirely and score only on genre + audio features, or (2) derive mood from audio features using a psychological model. Option 2 was chosen because mood is the most human-readable signal — users think in terms of "chill" or "energetic," not valence numbers. The circumplex model (valence × energy with mode, tempo, and acousticness as refiners) achieves roughly 70-80% accuracy on spot-checks, which is good enough for a recommendation system where approximate match is acceptable.
+
+**Trade-off:** Derived mood labels are approximations, not ground truth. Songs near the boundary between two mood categories can be mislabeled. This is documented in the model card.
+
+### Why Keep the Original Dataset
+
+The original 29-song dataset from Module 3 is still in `data/songs.csv`. The original unit tests (`test_recommender.py`) still run against it. This preserves the ability to compare the old and new systems directly and keeps the original test coverage intact. The new system uses `data/new_songs_dataset.csv` (114,000 tracks) exclusively.
+
+### Why Separate Unit and Integration Tests
+
+Unit tests run in under 2 seconds and require no API key — they verify scoring logic, mood derivation, guardrails, and consistency. Integration tests use real Gemini API calls and verify that the whole system works end-to-end. Keeping them separate means developers can run unit tests freely during development without burning API quota.
+
+---
+
+## Testing Summary
+
+### What Was Tested
+
+**Unit tests (15 tests, no API required):**
+- Consistency: same random seed always returns the same top 5 across 5 runs
+- Score threshold: profiles that should score well do; profiles with no match are flagged
+- Mood derivation: 70%+ spot-check accuracy across 7 mood labels
+- Edge cases: empty genre, unknown genre, rare genre (tango), all-0.5 "dead center" profile
+- Precision: at least 40% of top 5 results match the intended mood or genre
+- Guardrails: harmful, empty, nonsensical, and valid inputs all handled correctly
+
+**Integration tests (4 tests, real Gemini API):**
+- Agent retry: conflicting input triggers the retry loop without crashing
+- RAG fallback: if Gemini fails, explanations fall back to score-based text gracefully (tested with mock patch)
+- Full end-to-end: user types a request, agent runs, results come back well-formed with real explanations
+- Guardrail blocks before Gemini: harmful input never reaches the API
+
+**Total: 21 tests. All pass.**
+
+### What Was Discovered During Testing
+
+The most useful finding came from thinking through edge cases rather than happy paths. A duplicate song title bug — where the same song could appear twice in results under different genre tags in the Spotify dataset — was caught by testing the rare genre edge case. The fix (tracking `(artist, title)` pairs in a `seen_titles` set inside `recommend_songs()`) was made before it ever affected a real user.
+
+Testing also confirmed that the retry loop actually works in practice. For the conflicting request ("extremely high energy but deeply sad and melancholic"), all 3 retry attempts triggered, energy range was widened on attempt 1, genre requirement was dropped on attempt 2, and the system returned an honest message rather than pretending weak results were good.
+
+---
+
+## Reflection
+
+Building this system taught me that **system design matters more than the model**. Gemini is powerful, but without structured prompts, guardrails, and a clear retry strategy it produces inconsistent results. The agentic loop isn't smart — it's systematic. That distinction matters.
+
+The most surprising thing was how quickly bias shows up even in a simple system. Genre imbalance in the Spotify dataset, the circumplex model's limitations for non-Western music, and categorical labels overriding numerical features in borderline cases — these are real problems, not hypothetical ones. Documenting them honestly in the model card was more valuable than pretending they don't exist.
+
+What "applied AI" actually means: building something that runs, handles failures gracefully, and produces results you can explain. Not just calling an API, but thinking through the full system — the data, the logic, the guardrails, the tests, and the honest documentation of what it can and can't do.
+
+For the full reflection including what I would do differently and what this taught me about AI development, see [`reflection.md`](reflection.md).
