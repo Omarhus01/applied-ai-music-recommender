@@ -9,7 +9,7 @@ import random
 import pytest
 from unittest.mock import patch
 from src.recommender import load_songs_v2, recommend_songs
-from src.agent import run_agent, generate_rag_explanations
+from src.agent import run_agent, generate_rag_explanations, _call_gemini
 
 SAMPLE_SIZE = 2000
 SEED = 42
@@ -78,3 +78,17 @@ def test_end_to_end_full_flow():
             "Each result should have a non-trivial explanation"
         )
         assert score > 0, "All scores should be positive"
+
+
+# ---------------------------------------------------------------------------
+# 4. Guardrail integration test — harmful input blocked before reaching Gemini
+# ---------------------------------------------------------------------------
+def test_guardrail_blocks_before_gemini():
+    songs = make_songs()
+    harmful_input = "I want music to kill and hate people"
+
+    with patch("src.agent._call_gemini") as mock_gemini:
+        result = run_agent(harmful_input, songs, k=5)
+
+    assert result is None, "Harmful input should return None"
+    mock_gemini.assert_not_called(), "Gemini should never be called for harmful input"

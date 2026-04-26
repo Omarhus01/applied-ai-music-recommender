@@ -37,6 +37,38 @@ DEFAULTS = {
     "target_instrumentalness": 0.1,
 }
 
+MIN_SCORE_THRESHOLD = 3.0
+
+HARMFUL_KEYWORDS = [
+    "kill", "murder", "suicide", "hate", "abuse", "rape", "bomb", "terrorist"
+]
+
+
+def _validate_input(user_input: str) -> tuple[bool, str]:
+    """
+    Input guardrail. Returns (is_valid, reason).
+    Checks: empty, too short, nonsensical (no real words), harmful content.
+    """
+    if not user_input or not user_input.strip():
+        return False, "Input is empty."
+
+    words = user_input.strip().split()
+    if len(words) < 3:
+        return False, "Please describe what you're looking for in a bit more detail (at least 3 words)."
+
+    # Nonsense check — if fewer than 2 words contain actual letters, reject
+    real_words = [w for w in words if any(c.isalpha() for c in w)]
+    if len(real_words) < 2:
+        return False, "I couldn't understand that. Please describe the music you want in plain words."
+
+    # Harmful content check
+    lower = user_input.lower()
+    for keyword in HARMFUL_KEYWORDS:
+        if keyword in lower:
+            return False, "I can only help with music recommendations. Please keep your request music-related."
+
+    return True, ""
+
 
 def _call_gemini(prompt: str) -> str:
     response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
@@ -167,9 +199,10 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
     5. Check quality, retry up to 3 times
     """
     # --- Input guardrail ---
-    if not user_input or len(user_input.strip().split()) < 3:
-        print("\nPlease describe what you're looking for in a bit more detail (at least 3 words).")
-        logger.warning(f"Input too short: '{user_input}'")
+    is_valid, reason = _validate_input(user_input)
+    if not is_valid:
+        print(f"\n{reason}")
+        logger.warning(f"Input rejected: '{user_input}' — {reason}")
         return None
 
     logger.info(f"Agent started with input: '{user_input}'")
@@ -212,7 +245,9 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
         quality = _check_quality(user_input, results)
         if quality == "good":
             logger.info(f"Good results found on attempt {attempt + 1}")
-            return generate_rag_explanations(user_input, results)
+            final = generate_rag_explanations(user_input, results)
+            _score_guardrail(final)
+            return final
 
         logger.info(f"Results not satisfactory on attempt {attempt + 1}, retrying...")
         best_results = results
@@ -220,4 +255,18 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
 
     logger.info("Max retries reached, returning best results found")
     print("\nI couldn't find a perfect match, but here's the closest I found:")
-    return generate_rag_explanations(user_input, best_results)
+    final = generate_rag_explanations(user_input, best_results)
+    _score_guardrail(final)
+    return final
+
+
+def _score_guardrail(results: Optional[List[Tuple]]) -> None:
+    """Warn the user if the top result scores below the minimum threshold."""
+    if not results:
+        return
+    top_score = results[0][1]
+    if top_score < MIN_SCORE_THRESHOLD:
+        print(f"\n⚠ Warning: The best match found scored {top_score:.2f} / 6.5, "
+              f"which is below our quality threshold ({MIN_SCORE_THRESHOLD}). "
+              f"Try being more specific about genre or mood.")
+        logger.warning(f"Score guardrail triggered: top score {top_score:.2f} below threshold {MIN_SCORE_THRESHOLD}")

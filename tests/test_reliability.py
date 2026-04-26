@@ -8,6 +8,7 @@ Run with: python -m pytest tests/test_reliability.py -v
 import random
 from collections import Counter
 from src.recommender import load_songs_v2, recommend_songs, derive_mood, score_song
+from src.agent import _validate_input, MIN_SCORE_THRESHOLD
 
 SAMPLE_SIZE = 5000
 SEED = 42
@@ -200,3 +201,50 @@ def test_precision_mood_match():
     print(f"\n[Precision] Mood matches: {mood_matches}/5 | Genre matches: {genre_matches}/5")
     print(f"[Precision] Overall precision (mood OR genre): {precision:.0%}")
     assert precision >= 0.4, f"Precision {precision:.0%} is too low"
+
+
+# ---------------------------------------------------------------------------
+# 6. Guardrail tests
+# ---------------------------------------------------------------------------
+def test_guardrail_empty_input():
+    valid, reason = _validate_input("")
+    assert not valid, "Empty input should be rejected"
+
+
+def test_guardrail_too_short():
+    valid, reason = _validate_input("pop music")
+    assert not valid, "Input under 3 words should be rejected"
+
+
+def test_guardrail_nonsensical():
+    valid, reason = _validate_input("123 !!! 456")
+    assert not valid, "Input with no real words should be rejected"
+
+
+def test_guardrail_harmful():
+    valid, reason = _validate_input("I want music to kill and hate people")
+    assert not valid, "Harmful input should be rejected"
+
+
+def test_guardrail_valid_input():
+    valid, reason = _validate_input("I want something chill and relaxing")
+    assert valid, f"Valid input was incorrectly rejected: {reason}"
+
+
+def test_guardrail_score_threshold():
+    songs = make_songs()
+    # Extremely conflicting profile — should score poorly
+    profile = {
+        "favorite_genre": "nonexistent-genre-xyz",
+        "favorite_mood": "melancholic",
+        "target_energy": 0.99,
+        "target_valence": 0.01,
+        "likes_acoustic": True,
+        "target_instrumentalness": 0.99,
+    }
+    results = recommend_songs(profile, songs, k=5)
+    if results:
+        top_score = results[0][1]
+        print(f"\n[Score Guardrail] Top score for impossible profile: {top_score:.2f}")
+        if top_score < MIN_SCORE_THRESHOLD:
+            print("  Score guardrail would trigger correctly.")
