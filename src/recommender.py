@@ -122,6 +122,78 @@ def load_songs(csv_path: str) -> List[Dict]:
             })
     return songs
 
+
+def derive_mood(energy: float, valence: float, mode: int, tempo: float, acousticness: float) -> str:
+    """Derives a mood label using the circumplex model of affect."""
+    # Primary axes: valence (positive/negative) + energy (high/low)
+    if valence >= 0.6 and energy >= 0.6:
+        mood = "happy"
+    elif valence >= 0.6 and energy < 0.4:
+        mood = "peaceful"
+    elif valence < 0.4 and energy >= 0.6:
+        # minor key + high energy = intense or dark
+        mood = "dark" if mode == 0 else "intense"
+    elif valence < 0.4 and energy < 0.4:
+        mood = "melancholic"
+    elif valence >= 0.5 and energy >= 0.4:
+        # mid-high valence, mid energy — refine with tempo
+        mood = "energetic" if tempo >= 120 else "chill"
+    else:
+        # low-mid valence, mid energy — refine with acousticness
+        mood = "chill" if acousticness >= 0.5 else "intense"
+
+    return mood
+
+
+def load_songs_v2(csv_path: str, sample: Optional[int] = None) -> List[Dict]:
+    """Loads the Spotify dataset, maps columns, derives mood, and returns cleaned song dicts."""
+    import csv
+    import random
+
+    songs = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader):
+            # Drop rows with missing or invalid values
+            try:
+                energy           = float(row["energy"])
+                valence          = float(row["valence"])
+                acousticness     = float(row["acousticness"])
+                instrumentalness = float(row["instrumentalness"])
+                danceability     = float(row["danceability"])
+                tempo            = float(row["tempo"])
+                mode             = int(row["mode"])
+
+                # Skip rows with out-of-range values
+                for col, val in [("energy", energy), ("valence", valence),
+                                  ("acousticness", acousticness), ("instrumentalness", instrumentalness),
+                                  ("danceability", danceability)]:
+                    if not (0.0 <= val <= 1.0):
+                        raise ValueError(f"{col} out of range: {val}")
+
+            except (ValueError, KeyError):
+                continue
+
+            songs.append({
+                "id":               i,
+                "title":            row["track_name"],
+                "artist":           row["artists"],
+                "genre":            row["track_genre"],
+                "tempo_bpm":        tempo,
+                "energy":           energy,
+                "valence":          valence,
+                "danceability":     danceability,
+                "acousticness":     acousticness,
+                "instrumentalness": instrumentalness,
+                "mood":             derive_mood(energy, valence, mode, tempo, acousticness),
+            })
+
+    if sample is not None:
+        songs = random.sample(songs, min(sample, len(songs)))
+
+    return songs
+
+
 SCORING_MODES = {
     "default": {
         "genre":           1.0,
