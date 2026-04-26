@@ -95,7 +95,61 @@ I assumed Gemini would always return good results on the first try. In reality, 
 
 ---
 
-## 6. What This Taught Me About Real AI Systems
+## 6. Ethics and Critical Reflection
+
+### Limitations and Biases in This System
+
+Four real biases exist in this system and are documented honestly rather than hidden:
+
+- **Genre imbalance** — the Spotify dataset has thousands of pop tracks and fewer than 50 for genres like tango or jazz fusion. Users with rare genre preferences consistently get fewer and weaker results. The system warns them with a score guardrail instead of silently returning irrelevant songs.
+- **Circumplex model bias** — mood derivation is based on Western psychological research mapping valence and energy to emotional states. This model doesn't translate accurately to non-Western music traditions where the same audio features map to different emotional experiences.
+- **Language skew** — the dataset skews heavily toward English-language music. Non-English tracks are underrepresented, which affects results for users with preferences tied to non-English genres.
+- **Categorical dominance** — genre and mood matches add fixed bonus points regardless of how well the song's actual sound matches. In borderline cases, a song can rank highly because its label matches even if its sound doesn't. This was observed and documented in the Module 3 profile comparisons and is still present in the upgraded system.
+
+### Could This System Be Misused?
+
+The system's primary misuse risk is the input itself — users could submit harmful, manipulative, or nonsensical content hoping to get Gemini to behave unexpectedly. The input guardrail addresses this directly: harmful keywords are blocked before anything reaches Gemini, and inputs with fewer than 3 real words are rejected with a clear message. The guardrail is intentionally conservative — it would rather reject an edge-case valid request than pass a harmful one through.
+
+A secondary risk is data privacy: user requests in natural language are sent to Google's Gemini API for processing. The system does not store requests or session history between runs, but users should be aware their input leaves the local machine. This is documented in the model card.
+
+### What Surprised Me During Reliability Testing
+
+The biggest surprise was that the quality check — where Gemini judges whether its own results are good — turned out to be stricter than a human reviewer would be. In Case 2 (calm and instrumental for studying), the results that came back were genuinely reasonable: all five songs were chill, high-instrumentalness, and from a study genre. But Gemini failed them 3 times and triggered the "couldn't find a perfect match" message. A real user looking at those results would probably have been satisfied. This revealed something important: automated quality checks measure conformance to a definition of "good," not whether a real user would be happy. Those are not always the same thing.
+
+The second surprise was how quickly testing caught real bugs. I expected tests to confirm the system worked. Instead, they found a type mismatch crash, a duplicate song bug, and mood derivation boundary errors — all before the system was shown to anyone. That changed how I think about testing. It's not a checkbox. It's the thing that makes the system trustworthy.
+
+### Collaboration With AI During This Project
+
+AI was used throughout this project for planning, code generation, debugging, and documentation. One instance where it was genuinely helpful and one where it fell short:
+
+**Helpful — Planning Before Coding**
+
+Before writing a single line of the agentic workflow, we analyzed the full system design: what the retry loop needed to do, how the guardrails would interact with it, what each phase would require. That structured planning session prevented several design mistakes that would have required rewrites later. The AI's value here wasn't in writing code — it was in asking "have you thought about what happens when Gemini fails?" and "what does the system do if all 3 retries fail?" before those became bugs.
+
+**Flawed — Mood Accuracy Suggestion**
+
+When the mood derivation system needed to be built (the Spotify dataset has no mood column), the initial AI suggestion was generic: "use high energy + high valence for happy, low energy + low valence for sad." That's a reasonable starting point but it produced inaccurate results on boundary cases and had no scientific grounding.
+
+The actual solution came from going to the primary literature independently. Russell (1980) published the **circumplex model of affect** — a psychology model that places emotions on a two-dimensional space defined by valence (pleasant vs unpleasant) and arousal/activation (high vs low energy). Every emotional state occupies a position on this circle, which means you can map any valence + energy combination to a mood label with a clear scientific basis.
+
+**Russell's original circumplex model:**
+
+![Russell Circumplex Model](assets/russell-model.jpg)
+
+*Source: Russell, J.A. (1980). A circumplex model of affect. Journal of Personality and Social Psychology, 39(6), 1161–1178. [Full paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC2367156/)*
+
+The implementation used the four-quadrant version of the model (high/low arousal × pleasant/unpleasant) and added mode (major vs minor key), tempo, and acousticness as refiners to distinguish between adjacent mood categories:
+
+**Four-quadrant valence-focused model used in implementation:**
+
+![Circumplex Model with Valence Focus](assets/circumplex-valence.jpg)
+
+This produced 7 mood labels (happy, energetic, intense, dark, melancholic, chill, peaceful) mapped to audio feature ranges, achieving approximately 70-80% spot-check accuracy. The AI didn't suggest the circumplex model. That required going to the source. The lesson: AI suggestions for domain-specific problems are a starting point, not an answer. For anything with scientific depth, the primary literature is irreplaceable.
+
+---
+
+## 7. What This Taught Me About Real AI Systems
+
 
 ### System Design Matters More Than the Model
 
