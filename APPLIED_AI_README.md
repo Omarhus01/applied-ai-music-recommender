@@ -168,6 +168,33 @@ I couldn't find a perfect match, but here's the closest I found:
 
 ---
 
+### Case 4 — Calm and Instrumental (Triggers All 3 Retries — Different Reason)
+
+**Input:**
+```
+I want something calm and instrumental to focus while studying
+```
+
+**What happened:** Gemini parsed the request correctly (no genre, mood: chill, energy: 0.3, instrumentalness: 0.9), but the quality check failed on all 3 attempts. Unlike Case 3 where the preferences contradicted each other, here the problem was specificity — calm + highly instrumental is a rare combination in the dataset. The agent widened the energy range on retry 1, dropped the genre requirement on retry 2, and returned the honest message with the closest matches found. All 5 results are still chill and high-instrumentalness, meaning the system found the best it could.
+
+```
+I couldn't find a perfect match, but here's the closest I found:
+```
+
+**Output:**
+```
+| #1 | Elastic                     | 4to28                       | study          | chill | 4.35 / 6.5 |
+| #2 | Cetus                       | Sarah, the Illstrumentalist | study          | chill | 4.33 / 6.5 |
+| #3 | So Good At Being in Trouble | Unknown Mortal Orchestra    | chill          | chill | 4.32 / 6.5 |
+| #4 | Burn 4                      | Hird                        | trip-hop       | chill | 4.30 / 6.5 |
+| #5 | No Road Without a Turn      | Mano Le Tough               | minimal-techno | chill | 4.28 / 6.5 |
+```
+
+**RAG Explanation for #1:**
+> "This song is recommended for its 'study' genre and 'chill' mood, along with its high instrumentalness of 0.85 and low energy of 0.41, making it ideal for a calm, instrumental focus."
+
+---
+
 ## How to Run It
 
 ### Prerequisites
