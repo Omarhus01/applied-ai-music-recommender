@@ -160,11 +160,15 @@ def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5, mode: str =
     results = []
     artist_counts: Dict[str, int] = {}
     genre_counts: Dict[str, int] = {}
+    seen_titles: set = set()
 
     for song, score, explanation in ranked:
         artist = song["artist"]
         genre = song["genre"]
+        title_key = (artist, song["title"])
 
+        if title_key in seen_titles:
+            continue
         if artist_counts.get(artist, 0) >= 2:
             continue
         if genre_counts.get(genre, 0) >= 2:
@@ -173,6 +177,7 @@ def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5, mode: str =
         results.append((song, score, explanation))
         artist_counts[artist] = artist_counts.get(artist, 0) + 1
         genre_counts[genre] = genre_counts.get(genre, 0) + 1
+        seen_titles.add(title_key)
 
         if len(results) == k:
             break
