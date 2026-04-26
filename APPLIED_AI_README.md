@@ -94,8 +94,8 @@ source .venv/bin/activate     # Mac / Linux
 # Install dependencies
 pip install -r requirements.txt
 
-# Create your .env file
-echo GEMINI_API_KEY=your_key_here > .env
+# Create your .env file (use Python to avoid encoding issues on Windows)
+python -c "open('.env','w',encoding='utf-8').write('GEMINI_API_KEY=your_key_here\n')"
 ```
 
 ### Run the System
