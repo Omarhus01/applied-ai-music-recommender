@@ -89,7 +89,7 @@ I assumed Gemini would always return good results on the first try. In reality, 
 
 ## 5. What I Would Do Differently
 
-- **Switch to the full 114k dataset earlier** — the 10,000-song sample was right for development, but I'd test on the full dataset before final submission
+- **Switch to the full 114k dataset earlier in development** — I used a 10,000-song sample during development and switched to the full dataset before final submission, but testing on the full scale earlier would have caught any scale-related issues sooner
 - **Add multi-turn conversation** — right now every request is independent. A real system would let you say "give me something more upbeat" without starting over
 - **Add human-verified mood labels** — the circumplex model is a good approximation but a small labeled dataset would make mood derivation much more accurate
 

@@ -111,7 +111,7 @@ def print_recommendations(profile_name: str, recommendations: list) -> None:
 
 def main() -> None:
     print("Loading songs dataset...")
-    songs = load_songs_v2("data/new_songs_dataset.csv", sample=10000)
+    songs = load_songs_v2("data/new_songs_dataset.csv")
     print(f"Loaded {len(songs)} songs.\n")
 
     print("=" * 60)
