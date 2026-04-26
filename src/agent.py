@@ -110,6 +110,53 @@ def _relax_profile(profile: Dict, attempt: int) -> Dict:
     return relaxed
 
 
+def generate_rag_explanations(user_input: str, results: List[Tuple]) -> List[Tuple]:
+    """
+    RAG explanation layer:
+    - Retrieves each song's actual feature data (the grounding context)
+    - Passes user request + all songs' features to Gemini in one call
+    - Returns results with Gemini-generated natural language explanations
+    - Falls back to score-based explanation if Gemini fails
+    """
+    songs_context = ""
+    for i, (song, score, fallback_explanation) in enumerate(results, start=1):
+        songs_context += f"""
+Song {i}: {song['title']} by {song['artist']}
+  Genre: {song['genre']} | Mood: {song['mood']}
+  Energy: {song['energy']:.2f} | Valence: {song['valence']:.2f}
+  Acousticness: {song['acousticness']:.2f} | Instrumentalness: {song['instrumentalness']:.2f}
+  Score: {score:.2f}
+"""
+
+    prompt = f"""
+A user asked for music with this request: "{user_input}"
+
+Here are the top recommended songs with their audio features:
+{songs_context}
+
+For each song, write a single natural sentence explaining why it was recommended based on its features and the user's request.
+Be specific — mention actual feature values when relevant (e.g. energy, mood, genre).
+Return ONLY a JSON array of {len(results)} strings, one explanation per song, in order.
+Example format: ["Explanation for song 1.", "Explanation for song 2.", ...]
+"""
+
+    logger.info("Generating RAG explanations for recommendations")
+    try:
+        raw = _call_gemini(prompt)
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        explanations = json.loads(raw)
+        if isinstance(explanations, list) and len(explanations) == len(results):
+            logger.info("RAG explanations generated successfully")
+            return [
+                (song, score, explanations[i])
+                for i, (song, score, _) in enumerate(results)
+            ]
+    except Exception as e:
+        logger.warning(f"RAG explanation failed, using fallback: {e}")
+
+    return results
+
+
 def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[Tuple]]:
     """
     Main agentic loop:
@@ -165,7 +212,7 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
         quality = _check_quality(user_input, results)
         if quality == "good":
             logger.info(f"Good results found on attempt {attempt + 1}")
-            return results
+            return generate_rag_explanations(user_input, results)
 
         logger.info(f"Results not satisfactory on attempt {attempt + 1}, retrying...")
         best_results = results
@@ -173,4 +220,4 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
 
     logger.info("Max retries reached, returning best results found")
     print("\nI couldn't find a perfect match, but here's the closest I found:")
-    return best_results
+    return generate_rag_explanations(user_input, best_results)
