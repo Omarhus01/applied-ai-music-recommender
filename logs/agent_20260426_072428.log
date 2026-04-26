@@ -1,0 +1,16 @@
+2026-04-26 07:24:30,278 [WARNING] Input too short: ''
+2026-04-26 07:24:39,179 [INFO] Agent started with input: 'I want something chill and relaxing to study to'
+2026-04-26 07:24:39,179 [INFO] Parsing user input: I want something chill and relaxing to study to
+2026-04-26 07:24:39,179 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 07:24:42,451 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 07:24:42,458 [INFO] Parsed profile: {'favorite_genre': '', 'favorite_mood': 'chill', 'target_energy': 0.3, 'target_valence': 0.6, 'likes_acoustic': False, 'target_instrumentalness': 0.8, 'confidence': 'high'}
+2026-04-26 07:24:42,459 [INFO] Attempt 1 with profile: {'favorite_genre': '', 'favorite_mood': 'chill', 'target_energy': 0.3, 'target_valence': 0.6, 'likes_acoustic': False, 'target_instrumentalness': 0.8, 'confidence': 'high'}
+2026-04-26 07:24:42,501 [INFO] Checking result quality with Gemini
+2026-04-26 07:24:42,502 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 07:24:46,532 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 07:24:46,533 [INFO] Quality check result: good
+2026-04-26 07:24:46,533 [INFO] Good results found on attempt 1
+2026-04-26 07:24:46,534 [INFO] Generating RAG explanations for recommendations
+2026-04-26 07:24:46,534 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 07:24:52,103 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 07:24:52,105 [INFO] RAG explanations generated successfully

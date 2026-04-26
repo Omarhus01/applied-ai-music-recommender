@@ -1,0 +1,12 @@
+2026-04-26 07:16:57,851 [WARNING] Input too short: ''
+2026-04-26 07:17:43,251 [INFO] Agent started with input: 'I want something chill and relaxing to study to'
+2026-04-26 07:17:43,251 [INFO] Parsing user input: I want something chill and relaxing to study to
+2026-04-26 07:17:43,251 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 07:17:45,880 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 07:17:45,887 [INFO] Parsed profile: {'favorite_genre': '', 'favorite_mood': 'chill', 'target_energy': 0.3, 'target_valence': 0.6, 'likes_acoustic': False, 'target_instrumentalness': 0.8, 'confidence': 'high'}
+2026-04-26 07:17:45,887 [INFO] Attempt 1 with profile: {'favorite_genre': '', 'favorite_mood': 'chill', 'target_energy': 0.3, 'target_valence': 0.6, 'likes_acoustic': False, 'target_instrumentalness': 0.8, 'confidence': 'high'}
+2026-04-26 07:17:45,917 [INFO] Checking result quality with Gemini
+2026-04-26 07:17:45,918 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 07:17:48,944 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 07:17:48,945 [INFO] Quality check result: good
+2026-04-26 07:17:48,946 [INFO] Good results found on attempt 1

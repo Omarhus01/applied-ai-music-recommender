@@ -1,3 +1,90 @@
+# Model Card: Applied AI Music Recommender
+
+---
+
+## Applied AI Upgrade — Model Card
+
+### Model Name
+
+**VibeMatch 2.0 — Applied AI Edition**
+
+---
+
+### Intended Users
+
+This system is designed for any music listener who wants personalized recommendations without having to fill in structured forms. The user just describes what they want in plain English. It is built as an educational demonstration of how RAG, agentic workflows, and reliability testing work together in a real AI system. It is not intended for commercial deployment.
+
+---
+
+### What the System Does
+
+VibeMatch 2.0 takes a natural language request from the user, uses Gemini to parse it into a structured music preference profile, scores 10,000+ real Spotify tracks against that profile, checks whether the results actually match the intent, and generates grounded natural language explanations for each recommendation. If the results are not good enough, the agent retries automatically with relaxed constraints — up to 3 times.
+
+---
+
+### Training Data / Dataset
+
+**Spotify Tracks Dataset** — sourced from Kaggle, containing approximately 114,000 real tracks across 125 genres with audio features extracted by the Spotify API.
+
+Key columns used: `track_name`, `artists`, `track_genre`, `energy`, `valence`, `acousticness`, `instrumentalness`, `danceability`, `tempo`, `mode`.
+
+**No mood column exists in the dataset.** Mood is derived using the circumplex model of affect — a psychology model that maps valence + energy to mood labels (happy, chill, intense, melancholic, energetic, peaceful, dark). Mode (major/minor), tempo, and acousticness are used as refiners. Spot-check accuracy is approximately 70-80%.
+
+---
+
+### Precision Over Recall — Design Decision
+
+This system deliberately targets **precision over recall**. We would rather return 3 songs the user will genuinely like than return 10 where half are irrelevant. This design decision is enforced in three ways:
+
+1. The diversity penalty prevents the same artist or song title from dominating results
+2. The score guardrail warns the user when no strong match exists (top score below 3.0 / 6.5) rather than silently returning weak results
+3. The agent retry loop keeps trying until quality is confirmed — it stops only when Gemini judges the results as good or after 3 attempts
+
+---
+
+### Known Biases
+
+- **Genre imbalance** — the Spotify dataset has uneven genre representation. Some genres have thousands of songs, others have very few. Users with rare genre preferences will consistently receive fewer results.
+- **Circumplex model bias** — the mood derivation model is based on Western psychological research. It may not map accurately to non-Western music traditions where the relationship between audio features and emotional experience differs.
+- **Language bias** — the Spotify dataset skews heavily toward English-language music. Non-English tracks may be underrepresented in certain genres.
+- **Categorical dominance** — genre and mood matches add fixed bonus points. In borderline cases this can outweigh numerical feature alignment, meaning a song may rank highly because its label matches even if its sound does not.
+
+---
+
+### Ethical Considerations
+
+- No personal data is collected. The system does not store user requests, preferences, or session history between runs.
+- No behavioral tracking. The system does not track what songs a user plays or skips.
+- Mood labels are approximations derived from audio features, not psychological assessments. They should not be interpreted as statements about the emotional content of music for any individual user.
+- The system uses a commercial AI API (Gemini). Users should be aware that their natural language requests are sent to Google's servers for processing.
+- The Gemini API has a cost. Running this system at scale would incur API charges.
+
+---
+
+### Evaluation Summary
+
+- 19 tests total: 15 unit tests + 4 integration tests
+- Consistency test: same seed returns identical top 5 across 5 runs ✅
+- Mood derivation accuracy: 70%+ on spot-check against known songs ✅
+- Precision: at least 40% of top 5 results match intended mood or genre ✅
+- All guardrails verified: harmful input blocked before Gemini, malformed output falls back gracefully ✅
+
+---
+
+### Future Work
+
+- Switch to the full 114,000-song dataset for production
+- Add collaborative filtering using simulated user play/skip history
+- Fine-tune mood derivation with human-verified mood labels
+- Add multi-turn conversation so the user can refine results without starting over
+- Add support for language-specific genre preferences
+
+---
+
+*Original Module 3 model card preserved below.*
+
+---
+
 # Model Card: Music Recommender Simulation
 
 ## 1. Model Name

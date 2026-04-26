@@ -1,3 +1,124 @@
+# Reflection — Applied AI Music Recommender
+
+---
+
+## 1. What I Built and How It Works
+
+### Where It Started
+
+I started with the Module 3 music recommender — a system that scored songs against a structured user profile using a weighted formula. It worked, but it felt rigid. You had to know exactly what genre you wanted, what your target energy was, whether you liked acoustic music. Nobody talks like that.
+
+### What Changed
+
+The upgrade turns it into something that actually feels natural. You type what you're in the mood for and the system figures out the rest:
+
+- **Gemini** reads your request and converts it into a structured profile
+- The **recommender** scores songs from a 114,000-track Spotify dataset against that profile
+- **Gemini checks** whether the results actually match what you asked for
+- If they don't, it **adjusts and retries** — up to 3 times automatically
+- Each song gets a **natural language explanation** grounded in its actual audio features
+
+### The Dataset Challenge
+
+The new Spotify dataset had no mood column. Mood had to be derived from audio features using the **circumplex model of affect** — a psychology model that maps energy and valence to emotions like happy, chill, intense, or melancholic. Mode (major/minor key), tempo, and acousticness were used as refiners. That was one of the more interesting problems because the system had to make a judgment call about how a song *feels*, not just what genre it is.
+
+---
+
+## 2. Which AI Features I Added and Why
+
+I added three of the four possible features:
+
+| Feature | Why I Chose It |
+|---|---|
+| Agentic Workflow | Made the biggest difference to how the system feels — conversation instead of a form |
+| RAG | Raw score numbers mean nothing to a real user — grounded explanations fix that |
+| Reliability Testing | Working code is not the same as good logic — I needed to actually verify behavior |
+
+### Agentic Workflow
+
+The loop of **parse → recommend → check → retry** is what makes it feel like the system is thinking, not just calculating. I also liked that it forces the system to be honest — if it can't find a good match after three tries, it tells you that instead of pretending.
+
+### RAG
+
+The key thing I understood from the course is that RAG is not about letting AI guess — it's about giving the AI real data to work with so it can't hallucinate. The song's actual features (energy, valence, mood, genre) are the retrieved context. Gemini uses those to write something meaningful instead of making things up.
+
+### Reliability Testing
+
+The course was clear: working code is not the same as good logic. I wanted to verify the system actually behaves correctly, not just that it runs.
+
+---
+
+## 3. How I Approached Testing
+
+### The Mindset
+
+I started by thinking about what could go wrong rather than what should work. That's something the course emphasized — edge cases are where systems actually fail.
+
+### Unit Tests (No API — Fast)
+
+- Empty genre, unknown genre, rare genre (tango)
+- All-0.5 preferences (the "dead center" profile)
+- Consistency: same random seed always returns the same top 5
+- Precision: at least 40% of top 5 results match the intended mood or genre
+- All guardrails: harmful, empty, and nonsensical inputs correctly rejected
+
+### Integration Tests (Real Gemini API)
+
+- **RAG fallback**: simulated Gemini failing — verified the system doesn't crash, just falls back to score-based explanations
+- **Agent retry**: gave the system a conflicting input and verified the retry loop triggers without breaking
+- **Full end-to-end**: user types a request, agent runs, results come back well-formed with real explanations
+- **Guardrail integration**: harmful input never reaches Gemini at all
+
+### What Testing Revealed
+
+The duplicate song title bug — where the same song could appear twice in results under different genre tags — only became obvious when thinking through edge cases. I fixed it before it ever caused a real problem. That's the point of testing.
+
+---
+
+## 4. What Surprised Me
+
+### The API Quota Problem
+
+I didn't expect free tier limits to be hit so quickly. Dealing with that took real time — switching accounts, setting up billing, figuring out which model names were still available. It taught me something practical: any real AI system needs billing and rate limit handling from the start, not as an afterthought.
+
+### The Retry Loop
+
+I assumed Gemini would always return good results on the first try. In reality, for conflicting or vague requests it often needed to retry. Watching the retry logic actually trigger and seeing the results improve was genuinely satisfying — it meant the agentic design was actually working.
+
+---
+
+## 5. What I Would Do Differently
+
+- **Switch to the full 114k dataset earlier** — the 10,000-song sample was right for development, but I'd test on the full dataset before final submission
+- **Add multi-turn conversation** — right now every request is independent. A real system would let you say "give me something more upbeat" without starting over
+- **Add human-verified mood labels** — the circumplex model is a good approximation but a small labeled dataset would make mood derivation much more accurate
+
+---
+
+## 6. What This Taught Me About Real AI Systems
+
+### System Design Matters More Than the Model
+
+AI features are only as good as the system design around them. Gemini is powerful, but without guardrails, structured prompts, and a clear retry strategy it produces inconsistent results. The course framed this well — **agency is repeated decision-making, not intelligence**. The agentic loop isn't smart, it's systematic. That distinction matters.
+
+### Bias Shows Up Even in Simple Systems
+
+- Genre imbalance in the Spotify dataset
+- The circumplex model's limitations for non-Western music
+- Categorical labels overriding numerical features in borderline cases
+
+These are real problems, not hypothetical ones. Documenting them in the model card wasn't just an assignment requirement — it was the honest thing to do.
+
+### What "Applied AI" Actually Means
+
+Building something that runs, handles failures gracefully, and produces results you can explain — that's what the applied AI framing means. Not just calling an API, but thinking through the whole system: the data, the logic, the guardrails, the tests, and the honest documentation of what it can and can't do.
+
+---
+
+*Original Module 3 profile comparisons preserved below.*
+
+---
+
 # Profile Comparisons and Reflections
 
 ---
