@@ -19,7 +19,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler(log_file),
-        logging.StreamHandler(),
     ],
 )
 logger = logging.getLogger(__name__)
@@ -189,14 +188,20 @@ Example format: ["Explanation for song 1.", "Explanation for song 2.", ...]
     return results
 
 
+def _step(tag: str, message: str) -> None:
+    """Print an observable reasoning step to the user."""
+    print(f"  {tag:<22} {message}")
+
+
 def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[Tuple]]:
     """
-    Main agentic loop:
+    Main agentic loop with observable intermediate steps:
     1. Validate input
     2. Parse into UserProfile
     3. Ask follow-up if critical fields missing
     4. Run recommender
     5. Check quality, retry up to 3 times
+    6. Generate RAG explanations
     """
     # --- Input guardrail ---
     is_valid, reason = _validate_input(user_input)
@@ -206,6 +211,7 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
         return None
 
     logger.info(f"Agent started with input: '{user_input}'")
+    print()
 
     # --- Parse profile ---
     profile = _parse_profile(user_input)
@@ -213,8 +219,16 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
         print("\nSorry, I couldn't understand your request. Try describing the mood or genre you want.")
         return None
 
+    confidence = profile.get("confidence", "unknown")
+    genre = profile.get("favorite_genre") or "(none)"
+    mood = profile.get("favorite_mood") or "(none)"
+    energy = profile.get("target_energy", 0.5)
+    instrumentalness = profile.get("target_instrumentalness", 0.1)
+    _step("[Step 1 — Parse]", f"Confidence: {confidence} | Genre: {genre} | Mood: {mood} | Energy: {energy:.2f} | Instrumentalness: {instrumentalness:.2f}")
+
     # --- Follow-up if critical fields missing ---
     if not profile.get("favorite_genre") and not profile.get("favorite_mood"):
+        _step("[Step 1 — Follow-up]", "Confidence too low — asking for clarification...")
         followup = input("\nCould you tell me the genre or mood you're looking for? (e.g. 'rock' or 'chill'): ").strip()
         logger.info(f"Follow-up answer: '{followup}'")
         extra = _parse_profile(followup)
@@ -222,6 +236,9 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
             profile["favorite_genre"] = extra["favorite_genre"]
         if extra.get("favorite_mood"):
             profile["favorite_mood"] = extra["favorite_mood"]
+        genre = profile.get("favorite_genre") or "(none)"
+        mood = profile.get("favorite_mood") or "(none)"
+        _step("[Step 1 — Parse]", f"Updated | Genre: {genre} | Mood: {mood}")
 
     # Fill in defaults for missing fields
     for key, default in DEFAULTS.items():
@@ -242,21 +259,41 @@ def run_agent(user_input: str, songs: List[Dict], k: int = 5) -> Optional[List[T
         if best_results is None:
             best_results = results
 
+        top_score = results[0][1] if results else 0.0
+        _step("[Step 2 — Retrieve]", f"Scored {len(songs):,} songs | Top result: {top_score:.2f} / 6.5")
+
         quality = _check_quality(user_input, results)
         if quality == "good":
             logger.info(f"Good results found on attempt {attempt + 1}")
+            _step("[Step 3 — Evaluate]", f"Attempt {attempt + 1} → GOOD")
+            _step("[Step 4 — Explain]", f"Generating grounded explanations via RAG ({k} songs)")
             final = generate_rag_explanations(user_input, results)
             _score_guardrail(final)
+            print()
             return final
 
         logger.info(f"Results not satisfactory on attempt {attempt + 1}, retrying...")
         best_results = results
+
+        if attempt == 0:
+            relaxed_energy = profile.get("target_energy", 0.5) * 0.7 + 0.5 * 0.3
+            _step("[Step 3 — Evaluate]", f"Attempt {attempt + 1} → RETRY (quality check failed)")
+            _step("[Step 3 — Evaluate]", f"Relaxing: widening energy range to {relaxed_energy:.2f}")
+        elif attempt == 1:
+            _step("[Step 3 — Evaluate]", f"Attempt {attempt + 1} → RETRY (quality check failed)")
+            _step("[Step 3 — Evaluate]", "Relaxing: dropping genre requirement")
+        else:
+            _step("[Step 3 — Evaluate]", f"Attempt {attempt + 1} → RETRY (quality check failed)")
+
         profile = _relax_profile(profile, attempt)
 
     logger.info("Max retries reached, returning best results found")
+    _step("[Step 3 — Evaluate]", "Max attempts reached — returning best results found")
+    _step("[Step 4 — Explain]", f"Generating grounded explanations via RAG ({k} songs)")
     print("\nI couldn't find a perfect match, but here's the closest I found:")
     final = generate_rag_explanations(user_input, best_results)
     _score_guardrail(final)
+    print()
     return final
 
 

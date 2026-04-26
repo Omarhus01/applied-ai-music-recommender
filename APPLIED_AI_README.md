@@ -252,6 +252,77 @@ All tests:
 python -m pytest tests/ -v
 ```
 
+Evaluation harness (predefined cases, structured report):
+```bash
+python eval.py           # All 12 cases including Gemini API
+python eval.py --no-api  # Groups A + B only, no API needed (~3 seconds)
+```
+
+---
+
+## Stretch Features
+
+### Observable Agentic Steps
+
+Every run now prints a live decision trace showing exactly what the agent decided at each stage — not just the final result. This makes the reasoning chain visible to the user in real time.
+
+**Example — clear request (passes first try):**
+```
+  [Step 1 — Parse]       Confidence: high | Genre: pop | Mood: energetic | Energy: 0.90 | Instrumentalness: 0.00
+  [Step 2 — Retrieve]    Scored 114,000 songs | Top result: 5.28 / 6.5
+  [Step 3 — Evaluate]    Attempt 1 → GOOD
+  [Step 4 — Explain]     Generating grounded explanations via RAG (5 songs)
+```
+
+**Example — conflicting request (all 3 retries):**
+```
+  [Step 1 — Parse]       Confidence: high | Genre: (none) | Mood: melancholic | Energy: 1.00 | Instrumentalness: 0.50
+  [Step 2 — Retrieve]    Scored 114,000 songs | Top result: 3.48 / 6.5
+  [Step 3 — Evaluate]    Attempt 1 → RETRY (quality check failed)
+  [Step 3 — Evaluate]    Relaxing: widening energy range to 0.85
+  [Step 2 — Retrieve]    Scored 114,000 songs | Top result: 3.48 / 6.5
+  [Step 3 — Evaluate]    Attempt 2 → RETRY (quality check failed)
+  [Step 3 — Evaluate]    Relaxing: dropping genre requirement
+  [Step 2 — Retrieve]    Scored 114,000 songs | Top result: 3.54 / 6.5
+  [Step 3 — Evaluate]    Attempt 3 → RETRY (quality check failed)
+  [Step 3 — Evaluate]    Max attempts reached — returning best results found
+  [Step 4 — Explain]     Generating grounded explanations via RAG (5 songs)
+```
+
+### Evaluation Harness
+
+`eval.py` runs 12 predefined test cases across three groups and prints a structured pass/fail report. Cases cover guardrail inputs, edge cases, and full agent runs with real API calls.
+
+```
+============================================================
+  EVALUATION REPORT — VibeMatch 2.0
+============================================================
+
+[GUARDRAIL CASES — no API]
+  Case 01 | Empty input                         | PASS | Blocked correctly
+  Case 02 | Too short (2 words)                 | PASS | Blocked correctly
+  Case 03 | Nonsensical input                   | PASS | Blocked correctly
+  Case 04 | Harmful content                     | PASS | Blocked correctly
+
+[EDGE CASES — no API]
+  Case 05 | Unknown genre (jazz fusion)         | PASS | 5 results | Top: 3.27
+  Case 06 | Rare genre (tango)                  | PASS | 5 results | Top: 4.75
+  Case 07 | All 0.5 midpoint                    | PASS | 5 results | Top: 4.29
+  Case 08 | Impossible profile                  | PASS | Score: 3.39 — above threshold, guardrail not needed
+  Case 09 | Consistency (3 runs)                | PASS | All 3 runs identical
+
+[FULL AGENT CASES — Gemini API]
+  Case 10 | Clear request (workout pop)         | PASS | Top: 5.19 | Retries: 3 | Confidence: high
+  Case 11 | Hard to satisfy (study/instr.)      | PASS | Top: 4.13 | Retries: 0 | Confidence: high
+  Case 12 | Conflicting (energy + sad)          | PASS | Top: 3.50 | Retries: 3 | Confidence: high
+
+------------------------------------------------------------
+  Results      : 12 / 12 passed
+  Avg score    : 4.19 / 6.5
+  Avg retries  : 2.0
+============================================================
+```
+
 ---
 
 ## Project Structure
@@ -272,6 +343,7 @@ python -m pytest tests/ -v
 │   ├── test_recommender.py     # Original Module 3 unit tests
 │   ├── test_reliability.py     # Reliability and guardrail tests
 │   └── test_integration.py     # End-to-end integration tests
+├── eval.py                     # Evaluation harness — 12 predefined cases, structured report
 ├── APPLIED_AI_README.md        # This file
 ├── README.md                   # Original Module 3 README
 ├── model_card.md               # Model card for the upgraded system
