@@ -326,6 +326,19 @@ Unit tests run in under 2 seconds and require no API key — they verify scoring
 
 ## Testing Summary
 
+**21 out of 21 tests pass.** During development, 3 real bugs were caught by the test suite before they could affect a real user: a type mismatch where the recommender returned dicts but the system expected Song objects (caused a crash), a duplicate song bug where the same track appeared twice in results under different genre tags, and mood derivation boundary errors where songs near the line between two moods were mislabeled. All three were fixed because the tests found them — not because the system happened to work during a demo run.
+
+### Confidence Scoring
+
+Every time Gemini parses a user request, it returns a `"confidence"` field — either `"high"` or `"low"`. This is not decorative. Low confidence triggers a follow-up question instead of guessing and producing bad results. Across the 4 sample interactions:
+
+| Case | Request | Gemini Confidence | What Happened |
+|---|---|---|---|
+| 1 | Upbeat energetic pop for working out | `high` | Parsed directly, no follow-up |
+| 2 | Calm and instrumental to study | `high` | Parsed directly, quality check failed 3× (dataset limit, not parsing) |
+| 3 | Extremely high energy but deeply sad | `high` | Parsed directly, contradiction caused 3 retries |
+| 4 | Just give me something good | `low` | System asked a follow-up question before proceeding |
+
 ### What Was Tested
 
 **Unit tests (15 tests, no API required):**
@@ -342,13 +355,26 @@ Unit tests run in under 2 seconds and require no API key — they verify scoring
 - Full end-to-end: user types a request, agent runs, results come back well-formed with real explanations
 - Guardrail blocks before Gemini: harmful input never reaches the API
 
-**Total: 21 tests. All pass.**
-
 ### What Was Discovered During Testing
 
 The most useful finding came from thinking through edge cases rather than happy paths. A duplicate song title bug — where the same song could appear twice in results under different genre tags in the Spotify dataset — was caught by testing the rare genre edge case. The fix (tracking `(artist, title)` pairs in a `seen_titles` set inside `recommend_songs()`) was made before it ever affected a real user.
 
 Testing also confirmed that the retry loop actually works in practice. For the conflicting request ("extremely high energy but deeply sad and melancholic"), all 3 retry attempts triggered, energy range was widened on attempt 1, genre requirement was dropped on attempt 2, and the system returned an honest message rather than pretending weak results were good.
+
+---
+
+## Human Evaluation
+
+A peer who had not seen the project before ran the system independently and reviewed the outputs. Initial questions were about why the system sometimes retried and why it asked a follow-up question instead of just guessing — both were explained by walking through the agentic loop design. After that, the peer ran all 4 sample cases themselves and evaluated the results.
+
+| Case | Input | Results Felt Right? | Explanation Quality | Retry / Follow-up Behavior |
+|---|---|---|---|---|
+| 1 | Upbeat pop for working out | ✅ Yes — Ed Sheeran, Calvin Harris made sense | ✅ Specific and accurate, mentioned actual energy values | ✅ No retry needed, passed first try |
+| 2 | Calm and instrumental to study | ✅ Yes — study genre songs with high instrumentalness | ✅ Correctly referenced instrumentalness and low energy | ✅ Honest "couldn't find perfect match" message was appropriate |
+| 3 | High energy + melancholic | ✅ Yes — correctly flagged as conflicting | ✅ Explanation acknowledged the contradiction honestly | ✅ All 3 retries triggered, honest fallback returned |
+| 4 | Just give me something good | ✅ Yes — Free Fallin' and Hotel California for rock | ✅ Explained why they scored well for a vague request | ✅ Follow-up question was clear and natural |
+
+**Overall verdict from peer:** The system felt honest — it didn't pretend to find a perfect match when it couldn't, and the natural language explanations were specific enough to be believable. The follow-up question in Case 4 felt natural rather than robotic. The one question raised was why Case 2 (calm/instrumental) triggered retries when the results actually looked reasonable — this is a known limitation: the quality check is based on Gemini's judgment, which can be stricter than a human reviewer's.
 
 ---
 
