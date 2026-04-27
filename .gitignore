@@ -16,3 +16,6 @@ venv/
 
 # Environment variables
 .env
+
+# Auto-generated log files (sample logs already committed as evidence)
+logs/*.log
