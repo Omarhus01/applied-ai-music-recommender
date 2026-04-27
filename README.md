@@ -4,7 +4,9 @@
 
 **GitHub:** https://github.com/Omarhus01/applied-ai-music-recommender
 
-**Video Walkthrough:** [Loom link coming soon]
+**Video Walkthrough & Slides:** [Google Drive](https://drive.google.com/drive/folders/1WA3-0GFeEbzioslc7-1AHAeg5lu8NCnw?usp=sharing)
+
+> **Note:** The slides contain everything covered in the presentation. The video is 11 minutes — the extra length is due to Gemini processing time (the system was actively working through the 503-avoidance logic on the large dataset during the recording, not idle).
 
 ---
 

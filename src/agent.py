@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
@@ -70,8 +71,15 @@ def _validate_input(user_input: str) -> tuple[bool, str]:
 
 
 def _call_gemini(prompt: str) -> str:
-    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    return response.text.strip()
+    for attempt in range(4):
+        try:
+            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+            return response.text.strip()
+        except Exception as e:
+            if "503" in str(e) and attempt < 3:
+                time.sleep(5 * (attempt + 1))
+            else:
+                raise
 
 
 def _parse_profile(user_input: str) -> Dict:
@@ -108,6 +116,10 @@ Return only the JSON, no explanation.
 
 def _check_quality(user_input: str, results: List[Tuple]) -> str:
     """Ask Gemini if the results match the user's intent. Returns 'good' or 'retry'."""
+    if results and results[0][1] >= 4.5:
+        logger.info("Quality check bypassed — top score is high enough")
+        return "good"
+
     songs_summary = "\n".join(
         f"- {song['title']} by {song['artist']} | genre: {song['genre']} | mood: {song['mood']} | energy: {song['energy']:.2f}"
         for song, _, _ in results[:3]
