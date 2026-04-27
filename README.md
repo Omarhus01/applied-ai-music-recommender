@@ -394,8 +394,8 @@ Two natural extensions would meaningfully improve the RAG layer beyond what's bu
 │   ├── test_reliability.py     # Reliability and guardrail tests
 │   └── test_integration.py     # End-to-end integration tests
 ├── eval.py                     # Evaluation harness — 12 predefined cases, structured report
-├── APPLIED_AI_README.md        # This file
-├── README.md                   # Original Module 3 README
+├── README.md                   # This file — Applied AI upgrade
+├── README_MODULE3.md           # Original Module 3 README (preserved)
 ├── model_card.md               # Model card for the upgraded system
 └── reflection.md               # Personal reflection
 ```
