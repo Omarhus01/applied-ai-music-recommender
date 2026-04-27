@@ -1,0 +1,69 @@
+2026-04-26 15:51:27,863 [INFO] Agent started with input: 'I want upbeat energetic pop music to work out to'
+2026-04-26 15:51:27,863 [INFO] Parsing user input: I want upbeat energetic pop music to work out to
+2026-04-26 15:51:27,864 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:30,108 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:30,124 [INFO] Parsed profile: {'favorite_genre': 'pop', 'favorite_mood': 'energetic', 'target_energy': 0.9, 'target_valence': 0.9, 'likes_acoustic': False, 'target_instrumentalness': 0.2, 'confidence': 'high'}
+2026-04-26 15:51:30,124 [INFO] Attempt 1 with profile: {'favorite_genre': 'pop', 'favorite_mood': 'energetic', 'target_energy': 0.9, 'target_valence': 0.9, 'likes_acoustic': False, 'target_instrumentalness': 0.2, 'confidence': 'high'}
+2026-04-26 15:51:30,141 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:30,141 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:32,076 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:32,078 [INFO] Quality check result: retry
+2026-04-26 15:51:32,078 [INFO] Results not satisfactory on attempt 1, retrying...
+2026-04-26 15:51:32,078 [INFO] Attempt 2 with profile: {'favorite_genre': 'pop', 'favorite_mood': 'energetic', 'target_energy': 0.9, 'target_valence': 0.9, 'likes_acoustic': False, 'target_instrumentalness': 0.2, 'confidence': 'high'}
+2026-04-26 15:51:32,096 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:32,096 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:33,787 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:33,788 [INFO] Quality check result: retry
+2026-04-26 15:51:33,788 [INFO] Results not satisfactory on attempt 2, retrying...
+2026-04-26 15:51:33,789 [INFO] Retry 1: relaxed energy to 0.78
+2026-04-26 15:51:33,789 [INFO] Attempt 3 with profile: {'favorite_genre': 'pop', 'favorite_mood': 'energetic', 'target_energy': 0.78, 'target_valence': 0.9, 'likes_acoustic': False, 'target_instrumentalness': 0.2, 'confidence': 'high'}
+2026-04-26 15:51:33,807 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:33,808 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:36,743 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:36,744 [INFO] Quality check result: retry
+2026-04-26 15:51:36,744 [INFO] Results not satisfactory on attempt 3, retrying...
+2026-04-26 15:51:36,744 [INFO] Retry 2: dropped genre requirement
+2026-04-26 15:51:36,744 [INFO] Max retries reached, returning best results found
+2026-04-26 15:51:36,744 [INFO] Generating RAG explanations for recommendations
+2026-04-26 15:51:36,744 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:43,560 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:43,561 [INFO] RAG explanations generated successfully
+2026-04-26 15:51:43,561 [INFO] Agent started with input: 'I want something calm and instrumental to focus while studying'
+2026-04-26 15:51:43,561 [INFO] Parsing user input: I want something calm and instrumental to focus while studying
+2026-04-26 15:51:43,562 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:45,266 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:45,267 [INFO] Parsed profile: {'favorite_genre': '', 'favorite_mood': 'peaceful', 'target_energy': 0.3, 'target_valence': 0.5, 'likes_acoustic': False, 'target_instrumentalness': 0.9, 'confidence': 'high'}
+2026-04-26 15:51:45,267 [INFO] Attempt 1 with profile: {'favorite_genre': '', 'favorite_mood': 'peaceful', 'target_energy': 0.3, 'target_valence': 0.5, 'likes_acoustic': False, 'target_instrumentalness': 0.9, 'confidence': 'high'}
+2026-04-26 15:51:45,303 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:45,303 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:49,205 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:49,215 [INFO] Quality check result: retry
+2026-04-26 15:51:49,215 [INFO] Results not satisfactory on attempt 1, retrying...
+2026-04-26 15:51:49,215 [INFO] Attempt 2 with profile: {'favorite_genre': '', 'favorite_mood': 'peaceful', 'target_energy': 0.3, 'target_valence': 0.5, 'likes_acoustic': False, 'target_instrumentalness': 0.9, 'confidence': 'high'}
+2026-04-26 15:51:49,232 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:49,232 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:53,044 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:53,045 [INFO] Quality check result: retry
+2026-04-26 15:51:53,045 [INFO] Results not satisfactory on attempt 2, retrying...
+2026-04-26 15:51:53,046 [INFO] Retry 1: relaxed energy to 0.36
+2026-04-26 15:51:53,046 [INFO] Attempt 3 with profile: {'favorite_genre': '', 'favorite_mood': 'peaceful', 'target_energy': 0.36, 'target_valence': 0.5, 'likes_acoustic': False, 'target_instrumentalness': 0.9, 'confidence': 'high'}
+2026-04-26 15:51:53,063 [INFO] Checking result quality with Gemini
+2026-04-26 15:51:53,063 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:51:57,222 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:51:57,236 [INFO] Quality check result: retry
+2026-04-26 15:51:57,237 [INFO] Results not satisfactory on attempt 3, retrying...
+2026-04-26 15:51:57,237 [INFO] Retry 2: dropped genre requirement
+2026-04-26 15:51:57,237 [INFO] Max retries reached, returning best results found
+2026-04-26 15:51:57,238 [INFO] Generating RAG explanations for recommendations
+2026-04-26 15:51:57,238 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:52:02,486 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:52:02,487 [INFO] RAG explanations generated successfully
+2026-04-26 15:52:02,488 [INFO] Agent started with input: 'I want extremely high energy but deeply sad and melancholic music'
+2026-04-26 15:52:02,488 [INFO] Parsing user input: I want extremely high energy but deeply sad and melancholic music
+2026-04-26 15:52:02,488 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:52:05,688 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2026-04-26 15:52:05,689 [INFO] Parsed profile: {'favorite_genre': '', 'favorite_mood': 'melancholic', 'target_energy': 1.0, 'target_valence': 0.0, 'likes_acoustic': False, 'target_instrumentalness': 0.5, 'confidence': 'high'}
+2026-04-26 15:52:05,689 [INFO] Attempt 1 with profile: {'favorite_genre': '', 'favorite_mood': 'melancholic', 'target_energy': 1.0, 'target_valence': 0.0, 'likes_acoustic': False, 'target_instrumentalness': 0.5, 'confidence': 'high'}
+2026-04-26 15:52:05,706 [INFO] Checking result quality with Gemini
+2026-04-26 15:52:05,707 [INFO] AFC is enabled with max remote calls: 10.
+2026-04-26 15:52:06,385 [INFO] HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 503 Service Unavailable"
