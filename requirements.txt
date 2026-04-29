@@ -1,6 +1,6 @@
-pandas
-pytest
-streamlit
-tabulate
-google-genai
-python-dotenv
+pandas==3.0.2
+pytest==9.0.3
+streamlit==1.56.0
+tabulate==0.10.0
+google-genai==1.74.0
+python-dotenv==1.2.2
