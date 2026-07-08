@@ -570,3 +570,167 @@ Uses a 2,000-row sample. These make real API calls.
 - Mood accuracy: **~70–80%** (tested at ≥70%) · Precision: **≥40%** top-5 relevant
 - Diversity cap: **2** per artist, **2** per genre
 - 3 real bugs caught by tests
+
+
+---
+---
+
+# PART 7 — `main.py` (the CLI entry point, 138 lines)
+
+The file that runs when you type `python -m src.main`. Three parts: the `PROFILES` list, `print_recommendations` (formats output), and `main` (the interactive loop).
+
+## 7.1 — `PROFILES` (lines 17–75) — 7 hardcoded test personas
+
+```python
+PROFILES = [
+    ("High-Energy Pop",   {genre:"pop",  mood:"happy",  energy:0.90, ...}),   # normal
+    ("Chill Lofi",        {genre:"lofi", mood:"chill",  energy:0.38, ...}),   # normal
+    ("Deep Intense Rock", {genre:"rock", mood:"intense",energy:0.91, ...}),   # normal
+    # --- Adversarial profiles ---                                            # line 42
+    ("Conflicting: High Energy + Melancholic", {energy:0.90, valence:0.20}),  # contradiction
+    ("Missing Genre: Jazz Fusion",             {genre:"jazz fusion", mood:"relaxed"}),
+    ("Wants Instrumental but Likes Pop",       {genre:"pop", instrumentalness:0.95}),
+    ("Dead Center: All 0.5",                   {everything: 0.50}),
+]
+```
+
+**What they are:** 7 named personas, each a `(name, UserProfile-dict)` pair. The first 3 are *normal* users. The last 4 are explicitly labeled **"Adversarial profiles"** — deliberately hard cases:
+- **Conflicting** — energy 0.90 but valence 0.20; you can't be both hyped and sad. This is the Case 2 contradiction.
+- **Missing Genre** — "jazz fusion" is barely in the data, and mood "relaxed" isn't even one of the 7 valid mood labels.
+- **Wants Instrumental but Likes Pop** — instrumentalness 0.95 but pop is vocal-heavy; the two pull against each other.
+- **Dead Center** — every value 0.5, so nothing to latch onto; tests the neutral case.
+
+**⚠ The catch to know before he asks:** `PROFILES` is **defined but never used** by `main()`. The current `main` (line 123) runs an *interactive* loop that takes typed input and calls `run_agent` — it never iterates over `PROFILES`. This list is **leftover scaffolding** from an earlier batch-demo version that looped over these 7 personas. The adversarial *cases* still live in my testing; these particular dict constants just aren't wired into the live entry point.
+
+**How to talk about it (if asked "what are these profiles?"):** "Seven hardcoded test personas — three normal, four adversarial, like the high-energy-but-melancholic contradiction. They were pre-canned inputs to demo the agent against hard cases. The current `main` runs an interactive loop instead, so that list isn't wired into the live entry point — it's leftover from an earlier batch-demo version I'd clean up."
+
+> **Show Igor:** Nothing — verbal answer only, same category as the dead `load_songs`. Don't volunteer it. (Note: the file's top docstring still says "You will implement: load_songs, score_song, recommend_songs" — stale starter text, since I implemented `load_songs_v2`.)
+
+## 7.2 — `print_recommendations` (line 78) — the output formatter
+
+```python
+def print_recommendations(profile_name, recommendations):   # line 78
+    for i, (song, score, explanation) in enumerate(recommendations, start=1):
+        table_rows.append([f"#{i}", song["title"], song["artist"],
+                           song["genre"], song["mood"], f"{score:.2f} / 6.5"])
+    print(tabulate(table_rows, headers=[...], tablefmt="outline"))   # 98
+    # then prints "Why each song was recommended" with each explanation  # 104-109
+```
+
+**What it does:** Pure presentation. Takes the `(song, score, explanation)` tuples `run_agent` returns and prints them as a clean table using the `tabulate` library, then lists each song's explanation below. No logic, no AI — just formatting. This is where the "X.XX / 6.5" score display comes from.
+
+**How to talk about it:** "A formatting helper — it turns the result tuples into a readable table with tabulate and prints the explanation under each pick. It's purely presentational."
+
+> **Show Igor:** Nothing. Only relevant if he asks how output is displayed.
+
+## 7.3 — `main` (line 112) — the interactive loop
+
+```python
+def main():                                        # line 112
+    songs = load_songs_v2("data/new_songs_dataset.csv")   # 114  load 114k ONCE
+    print(f"Loaded {len(songs)} songs.")
+    while True:                                     # 123  conversational loop
+        user_input = input("What are you in the mood for? ").strip()
+        if user_input.lower() in ("quit","exit","q"): break   # 125
+        results = run_agent(user_input, songs, k=5)  # 129  the whole pipeline
+        if results:
+            print_recommendations("Your Recommendations", results)  # 131
+
+if __name__ == "__main__":                          # 136
+    main()
+```
+
+**What it does:** The real entry point. Loads all 114k songs **once** up front (not per query — efficiency), then loops: read typed input → `run_agent` → print. `quit`/`exit`/`q` ends it. The `if __name__ == "__main__"` guard (136) means `main()` only runs when the file is executed directly, not when imported.
+
+**Why load once matters:** loading 114k rows is the expensive part. Doing it once before the loop means every subsequent query is fast — only the API calls cost time.
+
+**How to talk about it:** "`main` loads the dataset once, then runs a simple read-eval-print loop — take a request, run the agent, print the table. The songs load up front so the per-query cost is just the agent, not re-reading 114k rows."
+
+> **Show Igor:** Nothing specific — this is the "how do I run it?" answer. Slide 2 covers the 114k implicitly.
+
+---
+---
+
+# PART 8 — Python concepts he might probe (know these cold)
+
+## 8.1 — `class` vs `@dataclass` vs "what's a decorator?"
+
+**A regular `class`** makes you write boilerplate to hold data:
+```python
+class Song:
+    def __init__(self, title, artist, energy):
+        self.title = title      # manually wire each arg to self
+        self.artist = artist
+        self.energy = energy
+```
+That `__init__` is you hand-wiring every field. To also print nicely or compare two Songs by value, you'd hand-write `__repr__` and `__eq__` too — lots of repetitive code whose only job is to store data.
+
+**A `@dataclass`** is the same class with that boilerplate auto-generated:
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Song:
+    title: str        # just declare the fields with types
+    artist: str
+    energy: float
+```
+The decorator reads the type-annotated fields and **auto-writes `__init__`, `__repr__`, and `__eq__` for you**. Same usage — `Song("Bad Habits", "Ed Sheeran", 0.89)` — but you didn't type the constructor.
+
+**What a decorator is:** a function that takes a class (or function) and returns a modified version of it. The `@` is just syntax sugar — `@dataclass` above the class is equivalent to `Song = dataclass(Song)`. So `@dataclass` takes my `Song` class and hands back a version with the generated methods added.
+
+**Crisp answers to the three likely questions:**
+- **"Is `@dataclass` a decorator?"** → "Yes. A decorator wraps a class or function and returns a modified version. `@dataclass` adds an auto-generated `__init__`, `__repr__`, and `__eq__` based on the type-annotated fields."
+- **"Difference between a class and a dataclass?"** → "A dataclass *is* a regular class — the decorator just generates the boilerplate a plain data-holding class would need by hand. Under the hood it's still a normal class."
+- **"Why use it here?"** → "`Song` and `UserProfile` are pure data containers. `@dataclass` gives me a typed constructor and value-based equality for free, so I don't clutter the file with a hand-written `__init__`. The type hints also document the expected fields."
+
+## 8.2 — Why dicts in the live path but dataclasses for tests?
+
+You'll notice the live pipeline passes **plain dicts** (`song["energy"]`) while the `Recommender` class and tests use **`Song`/`UserProfile` dataclasses** (`song.energy`). If asked:
+
+> "The dataclasses give tests a clean, typed, readable surface — `song.energy`, value equality, nice repr on failure. The live loader builds plain dicts because I'm streaming 114k rows and dicts are lighter and map directly from the CSV columns. Same data, two representations: typed objects where readability helps (tests), dicts where throughput matters (production)."
+
+---
+---
+
+# PART 9 — COMMON QUESTIONS BANK (per file)
+
+## About `agent.py`
+- **"Walk me through what happens end to end."** → guardrail → parse → optional follow-up → loop{score → check → relax} → explain → score-guardrail → return. (Draw it.)
+- **"Where does the LLM actually get used?"** → Four places, all through `_call_gemini`: parse, quality-check, relax-decision is *not* LLM (it's rule-based `_relax_profile`), and RAG explain. So really 3 LLM *tasks*: parse, check, explain.
+- **"Isn't the checker circular — same model judging itself?"** → Not fully independent, but a different *task* (evaluate vs generate) seeing only request + results. Catches obvious mismatches; stronger version = different model or rubric.
+- **"What if Gemini returns garbage JSON?"** → `_parse_profile` catches it and returns `{}`, then `DEFAULTS` backfill. `generate_rag_explanations` falls back to score-text. No crash.
+- **"Why cap retries at 3?"** → Each retry is an API call + latency. Three lets me relax twice (energy, then genre) without looping forever — the execution guardrail.
+- **"How many API calls per request?"** → 3 clear / 4 follow-up / 5 full-retry. (Know the breakdown.)
+
+## About `recommender.py`
+- **"How does scoring work?"** → weighted sum: exact-match bonuses (genre, mood) + closeness terms `w·(1−|target−actual|)` (energy, valence, instrumentalness) + directional acousticness. Max ~6.5.
+- **"Why is there no AI in this file?"** → Deliberate. The engine is deterministic so it's testable and reproducible — same input, same output. AI lives one layer up in the agent.
+- **"Why both a `Recommender` class and module-level functions?"** → Class is a thin wrapper for readable unit tests; functions are the live path over 114k dicts. Same logic, two entry points.
+- **"Why are there two datasets?"** → 29-song `songs.csv` + `load_songs` are dead legacy from the Module 3 starter; live system runs entirely on 114k via `load_songs_v2`. Kept for provenance.
+- **"How do you handle dirty data?"** → `load_songs_v2` try/except drops rows with missing or out-of-range (not 0–1) values before they reach the scorer.
+- **"How's mood computed if Spotify has no mood field?"** → `derive_mood` via the circumplex model — valence×energy quadrants refined by key, tempo, acousticness. ~70–80% accurate, western bias, documented.
+- **"What's the diversity cap for?"** → Max 2/artist, 2/genre so one perfect-matching artist can't fill all 5 slots. Trades raw score for variety.
+
+## About the JSON files
+- **"What does 'retrieval' actually retrieve?"** → Per song: its own audio features + a genre description (38-entry JSON) + a mood description (7-entry JSON). No vector DB — direct key lookup.
+- **"Why JSON instead of a vector database?"** → At ~40 genres, JSON is zero runtime cost, no hallucination, full control. A vector DB is the right production answer but overkill here.
+- **"How do the moods stay consistent across the system?"** → Same 7 labels everywhere: the parser constrains Gemini to them, `derive_mood` produces them, the mood JSON describes them. One shared vocabulary.
+
+## About the test files
+- **"How many tests, and can you run them now?"** → 21 total (15 reliability, 4 integration, 2 unit). 17 run with no API key in ~12s. The 4 integration ones need a live key.
+- **"How do you test something that calls an LLM?"** → Mocking. One test patches `_call_gemini` to throw and checks the RAG fallback; another mocks it entirely and asserts it's *never called* on harmful input. That's why the single wrapper is useful.
+- **"How do you know the recommender is deterministic?"** → `test_consistency` runs the same profile 5× with a fixed seed and asserts identical top-5.
+- **"Did the tests catch real bugs?"** → Yes — a dict-vs-`Song` type mismatch that crashed the pipeline, a duplicate track under two genre tags, and mood boundary mislabels.
+- **"What's your accuracy / precision?"** → Mood derivation ≥70% against 7 hand-labeled songs; precision ≥40% of top-5 relevant. Both asserted in tests, not just claimed.
+
+## About `main.py`
+- **"How do I run this?"** → `python -m src.main`, loads 114k once, then a conversational loop.
+- **"What are these PROFILES?"** → 7 test personas (3 normal, 4 adversarial); leftover scaffolding, not wired into the interactive `main`.
+- **"Why load songs before the loop?"** → Loading 114k is the expensive step; doing it once keeps every query fast.
+
+## Meta / design questions (likely from Igor)
+- **"What are you most proud of?"** → The self-check that catches hallucinated agreement — it addresses a real failure mode, not just a feature.
+- **"What would you change for production?"** → Vector DB for retrieval, a labeled eval harness to measure the checker's catch rate, cache parses, validate mood against human labels.
+- **"What was hardest?"** → The dict-vs-`Song` type mismatch — taught me to test the seams between components, not just each piece.
+- **"What's the biggest weakness?"** → The checker isn't independently validated with a labeled set yet, and mood derivation has a documented western-music bias.
